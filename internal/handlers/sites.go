@@ -204,7 +204,7 @@ func DeploySite(db *sql.DB) fiber.Handler {
 			}
 
 			if err := docker.DeploySite(
-				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath,
+				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey,
 				site.Domain, site.TemplateSlug, site.ContainerName, site.Port,
 			); err != nil {
 				log.Printf("deploy failed for site %d (%s): %v", id, site.Domain, err)
@@ -255,7 +255,7 @@ func StartSite(db *sql.DB) fiber.Handler {
 			}
 
 			if err := docker.StartSiteRemote(
-				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, site.ContainerName,
+				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey, site.ContainerName,
 			); err != nil {
 				log.Printf("start failed for site %d: %v", id, err)
 				return c.Status(fiber.StatusInternalServerError).SendString("Start failed: " + err.Error())
@@ -304,7 +304,7 @@ func StopSite(db *sql.DB) fiber.Handler {
 			}
 
 			if err := docker.StopSiteRemote(
-				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, site.ContainerName,
+				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey, site.ContainerName,
 			); err != nil {
 				log.Printf("stop failed for site %d: %v", id, err)
 				return c.Status(fiber.StatusInternalServerError).SendString("Stop failed: " + err.Error())
@@ -353,7 +353,7 @@ func RestartSite(db *sql.DB) fiber.Handler {
 			}
 
 			if err := docker.RestartSiteRemote(
-				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, site.ContainerName,
+				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey, site.ContainerName,
 			); err != nil {
 				log.Printf("restart failed for site %d: %v", id, err)
 				return c.Status(fiber.StatusInternalServerError).SendString("Restart failed: " + err.Error())
@@ -389,7 +389,7 @@ func DeleteSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 			server, err := models.GetServerByID(db, int(site.ServerID.Int64))
 			if err == nil {
 				if rmErr := docker.RemoveSiteRemote(
-					server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, site.ContainerName,
+					server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey, site.ContainerName,
 				); rmErr != nil {
 					log.Printf("remote cleanup failed for site %d: %v (continuing with DB delete)", id, rmErr)
 				}
@@ -500,9 +500,9 @@ func UpdateSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 
 		models.LogActivity(db, "site", id, "updated", "Updated site "+domain)
 
-		// Trigger Caddy reload if domain or routing changed
-		domainChanged := domain != existing.Domain
-		if caddyMgr != nil && domainChanged {
+		// Trigger Caddy reload if domain, port, or routing changed
+		needsReload := domain != existing.Domain || port != existing.Port
+		if caddyMgr != nil && needsReload {
 			if err := caddyMgr.AddSite(db, *site); err != nil {
 				log.Printf("caddy reload failed after updating site %s: %v", domain, err)
 			}

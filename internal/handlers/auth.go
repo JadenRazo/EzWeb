@@ -38,7 +38,7 @@ func LoginPost(db *sql.DB, cfg *config.Config) fiber.Handler {
 			Name:     "token",
 			Value:    token,
 			HTTPOnly: true,
-			Secure:   false, // Set true in production with HTTPS
+			Secure:   cfg.SecureCookies,
 			SameSite: "Lax",
 			Expires:  time.Now().Add(24 * time.Hour),
 			Path:     "/",

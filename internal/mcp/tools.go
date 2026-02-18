@@ -84,4 +84,14 @@ func RegisterTools(s *server.MCPServer, db *sql.DB) {
 		),
 		h.getServerStatus,
 	)
+
+	s.AddTool(
+		mcp.NewTool("backup_database",
+			mcp.WithDescription("Create a backup of the EzWeb SQLite database. Returns the path to the backup file."),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+			mcp.WithString("path", mcp.Description("Backup file path (default: ./ezweb.db.bak)")),
+		),
+		h.backupDatabase,
+	)
 }

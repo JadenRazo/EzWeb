@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS servers (
     ssh_user TEXT DEFAULT 'root',
     ssh_key_path TEXT NOT NULL,
     status TEXT DEFAULT 'unknown',
+    ssh_host_key TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -81,6 +82,16 @@ CREATE TABLE IF NOT EXISTS activity_log (
     details TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_health_checks_site_id ON health_checks(site_id);
+CREATE INDEX IF NOT EXISTS idx_health_checks_checked_at ON health_checks(checked_at);
+CREATE INDEX IF NOT EXISTS idx_sites_server_id ON sites(server_id);
+CREATE INDEX IF NOT EXISTS idx_sites_customer_id ON sites(customer_id);
+CREATE INDEX IF NOT EXISTS idx_sites_status ON sites(status);
+CREATE INDEX IF NOT EXISTS idx_payments_customer_id ON payments(customer_id);
+CREATE INDEX IF NOT EXISTS idx_payments_due_date ON payments(due_date);
+CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, entity_id);
 
 -- Seed templates
 INSERT OR IGNORE INTO site_templates (slug, label, description) VALUES

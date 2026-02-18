@@ -53,7 +53,7 @@ func generatePassword(length int) string {
 
 // DeploySite renders a compose template, uploads it to the remote server via
 // SFTP, and runs docker compose up to start the site containers.
-func DeploySite(host string, port int, user string, keyPath string, domain string, templateSlug string, containerName string, sitePort int) error {
+func DeploySite(host string, port int, user string, keyPath string, hostKey string, domain string, templateSlug string, containerName string, sitePort int) error {
 	vars := ComposeVars{
 		ContainerName:  containerName,
 		Port:           sitePort,
@@ -67,7 +67,7 @@ func DeploySite(host string, port int, user string, keyPath string, domain strin
 		return fmt.Errorf("failed to render compose for %s: %w", containerName, err)
 	}
 
-	sshClient, err := sshutil.NewClient(host, port, user, keyPath)
+	sshClient, err := sshutil.NewClientWithHostKey(host, port, user, keyPath, hostKey)
 	if err != nil {
 		return fmt.Errorf("SSH connect failed for %s:%d: %w", host, port, err)
 	}
@@ -103,8 +103,8 @@ func DeploySite(host string, port int, user string, keyPath string, domain strin
 }
 
 // StopSiteRemote stops the site containers on a remote server.
-func StopSiteRemote(host string, port int, user string, keyPath string, containerName string) error {
-	sshClient, err := sshutil.NewClient(host, port, user, keyPath)
+func StopSiteRemote(host string, port int, user string, keyPath string, hostKey string, containerName string) error {
+	sshClient, err := sshutil.NewClientWithHostKey(host, port, user, keyPath, hostKey)
 	if err != nil {
 		return fmt.Errorf("SSH connect failed: %w", err)
 	}
@@ -118,8 +118,8 @@ func StopSiteRemote(host string, port int, user string, keyPath string, containe
 }
 
 // StartSiteRemote starts the site containers on a remote server.
-func StartSiteRemote(host string, port int, user string, keyPath string, containerName string) error {
-	sshClient, err := sshutil.NewClient(host, port, user, keyPath)
+func StartSiteRemote(host string, port int, user string, keyPath string, hostKey string, containerName string) error {
+	sshClient, err := sshutil.NewClientWithHostKey(host, port, user, keyPath, hostKey)
 	if err != nil {
 		return fmt.Errorf("SSH connect failed: %w", err)
 	}
@@ -133,8 +133,8 @@ func StartSiteRemote(host string, port int, user string, keyPath string, contain
 }
 
 // RestartSiteRemote restarts the site containers on a remote server.
-func RestartSiteRemote(host string, port int, user string, keyPath string, containerName string) error {
-	sshClient, err := sshutil.NewClient(host, port, user, keyPath)
+func RestartSiteRemote(host string, port int, user string, keyPath string, hostKey string, containerName string) error {
+	sshClient, err := sshutil.NewClientWithHostKey(host, port, user, keyPath, hostKey)
 	if err != nil {
 		return fmt.Errorf("SSH connect failed: %w", err)
 	}
@@ -148,8 +148,8 @@ func RestartSiteRemote(host string, port int, user string, keyPath string, conta
 }
 
 // RemoveSiteRemote tears down the site containers and removes volumes on a remote server.
-func RemoveSiteRemote(host string, port int, user string, keyPath string, containerName string) error {
-	sshClient, err := sshutil.NewClient(host, port, user, keyPath)
+func RemoveSiteRemote(host string, port int, user string, keyPath string, hostKey string, containerName string) error {
+	sshClient, err := sshutil.NewClientWithHostKey(host, port, user, keyPath, hostKey)
 	if err != nil {
 		return fmt.Errorf("SSH connect failed: %w", err)
 	}

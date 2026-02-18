@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"html"
 	"log"
 	"strings"
 	"time"
@@ -96,7 +97,7 @@ func ImportProject(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 
 		if c.Get("HX-Request") != "" {
 			c.Set("Content-Type", "text/html")
-			return c.SendString(`<div class="p-4 bg-green-50 text-green-800 rounded-lg">Imported ` + domain + ` successfully. <a href="/sites" class="underline font-medium">View sites</a></div>`)
+			return c.SendString(`<div class="p-4 bg-green-50 text-green-800 rounded-lg">Imported ` + html.EscapeString(domain) + ` successfully. <a href="/sites" class="underline font-medium">View sites</a></div>`)
 		}
 		return c.Redirect("/sites")
 	}

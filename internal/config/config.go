@@ -15,6 +15,8 @@ type Config struct {
 	AdminPass      string
 	DBPath         string
 	CaddyfilePath  string
+	AcmeEmail      string
+	SecureCookies  bool
 	WebhookURL     string
 	WebhookFormat  string
 	AlertThreshold int
@@ -24,12 +26,14 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		Port:          getEnv("APP_PORT", "3000"),
-		JWTSecret:     getEnv("JWT_SECRET", ""),
-		AdminUser:     getEnv("ADMIN_USER", "admin"),
-		AdminPass:     getEnv("ADMIN_PASS", ""),
-		DBPath:        getEnv("DB_PATH", "./ezweb.db"),
+		Port:           getEnv("APP_PORT", "3000"),
+		JWTSecret:      getEnv("JWT_SECRET", ""),
+		AdminUser:      getEnv("ADMIN_USER", "admin"),
+		AdminPass:      getEnv("ADMIN_PASS", ""),
+		DBPath:         getEnv("DB_PATH", "./ezweb.db"),
 		CaddyfilePath:  getEnv("CADDYFILE_PATH", "/etc/caddy/Caddyfile"),
+		AcmeEmail:      getEnv("ACME_EMAIL", ""),
+		SecureCookies:  getEnv("SECURE_COOKIES", "false") == "true",
 		WebhookURL:     getEnv("WEBHOOK_URL", ""),
 		WebhookFormat:  getEnv("WEBHOOK_FORMAT", "discord"),
 		AlertThreshold: getEnvInt("ALERT_THRESHOLD", 3),

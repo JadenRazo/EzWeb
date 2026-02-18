@@ -86,6 +86,17 @@ func DeleteServer(db *sql.DB, id int) error {
 	return nil
 }
 
+func UpdateServerHostKey(db *sql.DB, id int, hostKey string) error {
+	_, err := db.Exec(
+		"UPDATE servers SET ssh_host_key = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		hostKey, id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update server host key: %w", err)
+	}
+	return nil
+}
+
 func UpdateServerStatus(db *sql.DB, id int, status string) error {
 	_, err := db.Exec(
 		"UPDATE servers SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",

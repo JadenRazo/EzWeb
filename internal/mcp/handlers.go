@@ -313,6 +313,28 @@ func (h *handlers) getServerStatus(_ context.Context, req mcp.CallToolRequest) (
 	return jsonResult(result)
 }
 
+func (h *handlers) backupDatabase(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	args := req.GetArguments()
+
+	backupPath := "./ezweb.db.bak"
+	if p, ok := args["path"].(string); ok && p != "" {
+		backupPath = p
+	}
+
+	// Use SQLite's built-in online backup via VACUUM INTO, which produces a
+	// consistent copy without requiring the database to be offline.
+	_, err := h.db.Exec("VACUUM INTO ?", backupPath)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("backup failed: %v", err)), nil
+	}
+
+	result := map[string]any{
+		"status": "success",
+		"path":   backupPath,
+	}
+	return jsonResult(result)
+}
+
 // helpers
 
 func toInt(v any) (int, error) {

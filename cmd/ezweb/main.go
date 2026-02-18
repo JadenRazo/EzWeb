@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// Caddy manager
-	caddyMgr := caddy.NewManager(cfg.CaddyfilePath)
+	caddyMgr := caddy.NewManager(cfg.CaddyfilePath, cfg.AcmeEmail)
 
 	// Start background health checker
 	ctx, cancel := context.WithCancel(context.Background())

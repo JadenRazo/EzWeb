@@ -54,10 +54,22 @@ templ Dashboard(data DashboardData) {
 						<p class="text-gray-500 text-sm mt-1" x-data x-text="(() => { const d = new Date(); return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); })()">
 						</p>
 					</div>
-					<div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
-						<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-						<span class="text-xs font-medium text-green-700">All systems operational</span>
-					</div>
+					if data.ErrorCount > 0 {
+						<div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-full">
+							<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+							<span class="text-xs font-medium text-red-700">{ strconv.Itoa(data.ErrorCount) } site(s) errored</span>
+						</div>
+					} else if data.StoppedCount > 0 {
+						<div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-full">
+							<span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+							<span class="text-xs font-medium text-yellow-700">{ strconv.Itoa(data.StoppedCount) } site(s) stopped</span>
+						</div>
+					} else {
+						<div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
+							<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+							<span class="text-xs font-medium text-green-700">All systems operational</span>
+						</div>
+					}
 				</div>
 
 				<!-- Stat cards grid -->

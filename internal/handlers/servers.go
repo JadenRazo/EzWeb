@@ -193,6 +193,16 @@ func TestServerConnection(db *sql.DB) fiber.Handler {
 			status = "offline"
 		} else {
 			log.Printf("server %d (%s) is online, Docker %s", id, server.Host, version)
+
+			if server.SSHHostKey == "" {
+				if hostKey, hkErr := sshutil.GetHostKey(server.Host, server.SSHPort); hkErr == nil {
+					if dbErr := models.UpdateServerHostKey(db, id, hostKey); dbErr != nil {
+						log.Printf("failed to store host key for server %d: %v", id, dbErr)
+					}
+				} else {
+					log.Printf("failed to probe host key for server %d (%s): %v", id, server.Host, hkErr)
+				}
+			}
 		}
 
 		if err := models.UpdateServerStatus(db, id, status); err != nil {

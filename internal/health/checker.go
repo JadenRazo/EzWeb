@@ -65,6 +65,9 @@ func (ch *Checker) Start(ctx context.Context) {
 }
 
 func (ch *Checker) checkAll() {
+	// Prune health checks older than 30 days
+	ch.DB.Exec("DELETE FROM health_checks WHERE checked_at < datetime('now', '-30 days')")
+
 	sites, err := models.GetAllSites(ch.DB)
 	if err != nil {
 		log.Printf("Health checker: failed to get sites: %v", err)
@@ -86,7 +89,11 @@ func (ch *Checker) checkSite(site models.Site) {
 
 	// HTTP check
 	if site.Domain != "" {
-		url := fmt.Sprintf("http://%s", site.Domain)
+		scheme := "http"
+		if site.SSLEnabled {
+			scheme = "https"
+		}
+		url := fmt.Sprintf("%s://%s", scheme, site.Domain)
 		start := time.Now()
 		resp, err := ch.Client.Get(url)
 		latency := time.Since(start).Milliseconds()
@@ -191,7 +198,7 @@ func (ch *Checker) checkRemoteContainer(site models.Site, hc *models.HealthCheck
 		return
 	}
 
-	client, err := sshutil.NewClient(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath)
+	client, err := sshutil.NewClientWithHostKey(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey)
 	if err != nil {
 		hc.ContainerStatus = "ssh_error"
 		return

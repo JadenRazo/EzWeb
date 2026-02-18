@@ -7,19 +7,22 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+	"sync"
 
 	"ezweb/internal/models"
 )
 
 type Manager struct {
 	CaddyfilePath string
+	AcmeEmail     string
+	mu            sync.Mutex
 }
 
-func NewManager(caddyfilePath string) *Manager {
+func NewManager(caddyfilePath string, acmeEmail string) *Manager {
 	if caddyfilePath == "" {
 		caddyfilePath = "/etc/caddy/Caddyfile"
 	}
-	return &Manager{CaddyfilePath: caddyfilePath}
+	return &Manager{CaddyfilePath: caddyfilePath, AcmeEmail: acmeEmail}
 }
 
 // GenerateCaddyfile builds a complete Caddyfile from all managed sites.
@@ -27,7 +30,9 @@ func (m *Manager) GenerateCaddyfile(sites []models.Site) (string, error) {
 	var b strings.Builder
 
 	b.WriteString("{\n")
-	b.WriteString("\temail admin@jadenrazo.dev\n")
+	if m.AcmeEmail != "" {
+		b.WriteString(fmt.Sprintf("\temail %s\n", m.AcmeEmail))
+	}
 	b.WriteString("}\n\n")
 
 	for _, site := range sites {
@@ -237,18 +242,28 @@ func writeReverseProxy(b *strings.Builder, rule models.RoutingRule) {
 
 // Reload regenerates the Caddyfile from all sites and reloads Caddy.
 func (m *Manager) Reload(sites []models.Site) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	content, err := m.GenerateCaddyfile(sites)
 	if err != nil {
 		return fmt.Errorf("failed to generate Caddyfile: %w", err)
 	}
 
-	if err := os.WriteFile(m.CaddyfilePath, []byte(content), 0644); err != nil {
+	tmpPath := m.CaddyfilePath + ".tmp"
+	if err := os.WriteFile(tmpPath, []byte(content), 0644); err != nil {
 		return fmt.Errorf("failed to write Caddyfile: %w", err)
 	}
 
-	out, err := exec.Command("caddy", "validate", "--config", m.CaddyfilePath).CombinedOutput()
+	out, err := exec.Command("caddy", "validate", "--config", tmpPath).CombinedOutput()
 	if err != nil {
+		os.Remove(tmpPath)
 		return fmt.Errorf("Caddyfile validation failed: %w\n%s", err, string(out))
+	}
+
+	if err := os.Rename(tmpPath, m.CaddyfilePath); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to move Caddyfile into place: %w", err)
 	}
 
 	out, err = exec.Command("caddy", "reload", "--config", m.CaddyfilePath).CombinedOutput()
