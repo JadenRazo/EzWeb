@@ -9,6 +9,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"ezweb/internal/docker"
 	"ezweb/internal/models"
 	"ezweb/views/components"
 	"ezweb/views/layouts"
@@ -16,7 +17,7 @@ import (
 	"strconv"
 )
 
-func Servers(servers []models.Server) templ.Component {
+func Servers(localInfo docker.LocalServerInfo, servers []models.Server) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -89,11 +90,9 @@ func Servers(servers []models.Server) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					if len(servers) == 0 {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<tr><td colspan=\"6\" class=\"px-6 py-16 text-center\"><div class=\"flex flex-col items-center gap-3\"><div class=\"w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center\"><svg class=\"w-6 h-6 text-gray-400\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z\"></path></svg></div><p class=\"text-sm font-medium text-gray-900\">No servers yet</p><p class=\"text-xs text-gray-400\">Add a server to start deploying sites.</p></div></td></tr>")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
+					templ_7745c5c3_Err = partials.LocalhostRow(localInfo).Render(ctx, templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
 					}
 					for _, s := range servers {
 						templ_7745c5c3_Err = partials.ServerRow(s).Render(ctx, templ_7745c5c3_Buffer)
@@ -101,7 +100,7 @@ func Servers(servers []models.Server) templ.Component {
 							return templ_7745c5c3_Err
 						}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</tbody>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</tbody>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -129,7 +128,7 @@ func Servers(servers []models.Server) templ.Component {
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<form hx-post=\"/servers\" hx-target=\"#server-list\" hx-swap=\"beforeend\" @htmx:after-request=\"if(event.detail.successful) $dispatch('close-modal')\" class=\"space-y-5\"><div><label for=\"name\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Server Name</label> <input type=\"text\" id=\"name\" name=\"name\" required class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"My Production Server\"></div><div><label for=\"host\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Host / IP</label> <input type=\"text\" id=\"host\" name=\"host\" required class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"192.168.1.100 or server.example.com\"></div><div class=\"grid grid-cols-2 gap-4\"><div><label for=\"ssh_port\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">SSH Port</label> <input type=\"number\" id=\"ssh_port\" name=\"ssh_port\" value=\"22\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\"></div><div><label for=\"ssh_user\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">SSH User</label> <input type=\"text\" id=\"ssh_user\" name=\"ssh_user\" value=\"root\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\"></div></div><div><label for=\"ssh_key_path\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">SSH Key Path</label> <input type=\"text\" id=\"ssh_key_path\" name=\"ssh_key_path\" required class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"/root/.ssh/id_rsa\"></div><div class=\"flex justify-end gap-3 pt-2 border-t border-gray-100\"><button type=\"button\" @click=\"$dispatch('close-modal')\" class=\"px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors\">Cancel</button> <button type=\"submit\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150\">Add Server</button></div></form>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<form hx-post=\"/servers\" hx-target=\"#server-list\" hx-swap=\"beforeend\" @htmx:after-request=\"if(event.detail.successful) $dispatch('close-modal')\" class=\"space-y-5\"><div><label for=\"name\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Server Name</label> <input type=\"text\" id=\"name\" name=\"name\" required class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"My Production Server\"></div><div><label for=\"host\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Host / IP</label> <input type=\"text\" id=\"host\" name=\"host\" required class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"192.168.1.100 or server.example.com\"></div><div class=\"grid grid-cols-2 gap-4\"><div><label for=\"ssh_port\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">SSH Port</label> <input type=\"number\" id=\"ssh_port\" name=\"ssh_port\" value=\"22\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\"></div><div><label for=\"ssh_user\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">SSH User</label> <input type=\"text\" id=\"ssh_user\" name=\"ssh_user\" value=\"root\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\"></div></div><div><label for=\"ssh_key_path\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">SSH Key Path</label> <input type=\"text\" id=\"ssh_key_path\" name=\"ssh_key_path\" required class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"/root/.ssh/id_rsa\"></div><div class=\"flex justify-end gap-3 pt-2 border-t border-gray-100\"><button type=\"button\" @click=\"$dispatch('close-modal')\" class=\"px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors\">Cancel</button> <button type=\"submit\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150\">Add Server</button></div></form>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -139,7 +138,7 @@ func Servers(servers []models.Server) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</main></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</main></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -177,7 +176,7 @@ func ServersCount(count int) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(count))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/servers.templ`, Line: 123, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/servers.templ`, Line: 110, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {

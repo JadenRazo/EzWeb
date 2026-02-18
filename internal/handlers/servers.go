@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"strconv"
 
+	"ezweb/internal/docker"
 	"ezweb/internal/models"
 	sshutil "ezweb/internal/ssh"
 	"ezweb/views/pages"
@@ -20,8 +22,9 @@ func ListServers(db *sql.DB) fiber.Handler {
 			log.Printf("failed to list servers: %v", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to load servers")
 		}
+		localInfo := docker.GetLocalServerInfo(context.Background())
 		c.Set("Content-Type", "text/html")
-		return pages.Servers(servers).Render(c.Context(), c.Response().BodyWriter())
+		return pages.Servers(localInfo, servers).Render(c.Context(), c.Response().BodyWriter())
 	}
 }
 

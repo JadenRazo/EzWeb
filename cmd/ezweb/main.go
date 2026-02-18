@@ -44,6 +44,9 @@ func main() {
 		log.Fatalf("Failed to ensure admin user: %v", err)
 	}
 
+	// Seed activity log for pre-existing entities (no-op if already populated)
+	models.BackfillActivities(database)
+
 	// Caddy manager
 	caddyMgr := caddy.NewManager(cfg.CaddyfilePath, cfg.AcmeEmail)
 
