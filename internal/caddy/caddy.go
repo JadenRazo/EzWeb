@@ -12,6 +12,34 @@ import (
 	"ezweb/internal/models"
 )
 
+// sanitizeDomain strips characters that could break or inject blocks into a
+// Caddyfile: newlines, backticks, and curly braces.
+func sanitizeDomain(domain string) string {
+	replacer := strings.NewReplacer(
+		"\n", "",
+		"\r", "",
+		"`", "",
+		"{", "",
+		"}", "",
+	)
+	return strings.TrimSpace(replacer.Replace(domain))
+}
+
+// validateExtraDirective returns an error if the directive contains a newline
+// or a bare opening brace, which could be used to inject arbitrary Caddyfile
+// blocks.
+func validateExtraDirective(d string) error {
+	if strings.ContainsAny(d, "\n\r") {
+		return fmt.Errorf("extra directive must not contain newlines: %q", d)
+	}
+	// Reject lines that open a block — a '{' appearing anywhere in the
+	// directive string is enough to break the enclosing site block.
+	if strings.Contains(d, "{") {
+		return fmt.Errorf("extra directive must not contain '{': %q", d)
+	}
+	return nil
+}
+
 type Manager struct {
 	CaddyfilePath string
 	AcmeEmail     string
@@ -40,7 +68,32 @@ func (m *Manager) GenerateCaddyfile(sites []models.Site) (string, error) {
 			continue
 		}
 
+		// Strip characters that could break or inject into the Caddyfile.
+		site.Domain = sanitizeDomain(site.Domain)
+		if site.Domain == "" {
+			continue
+		}
+
 		rc := site.RoutingConfig
+
+		// Sanitize redirect domains and validate extra directives up front so
+		// that a bad value causes the whole reload to fail rather than writing
+		// a corrupted Caddyfile.
+		if rc != nil {
+			sanitized := make([]string, 0, len(rc.RedirectDomains))
+			for _, rd := range rc.RedirectDomains {
+				if s := sanitizeDomain(rd); s != "" {
+					sanitized = append(sanitized, s)
+				}
+			}
+			rc.RedirectDomains = sanitized
+
+			for _, d := range rc.ExtraDirectives {
+				if err := validateExtraDirective(d); err != nil {
+					return "", fmt.Errorf("site %q: %w", site.Domain, err)
+				}
+			}
+		}
 
 		// Redirect blocks (e.g. www → non-www)
 		if rc != nil {
@@ -251,7 +304,7 @@ func (m *Manager) Reload(sites []models.Site) error {
 	}
 
 	tmpPath := m.CaddyfilePath + ".tmp"
-	if err := os.WriteFile(tmpPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(tmpPath, []byte(content), 0600); err != nil {
 		return fmt.Errorf("failed to write Caddyfile: %w", err)
 	}
 

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"regexp"
 	"text/template"
 
 	"ezweb/internal/templates"
@@ -13,6 +14,24 @@ import (
 
 	"github.com/pkg/sftp"
 )
+
+// containerNameRe matches valid container names: starts with an alphanumeric
+// character, followed by alphanumerics, underscores, dots, or hyphens.
+var containerNameRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.\-]*$`)
+
+// ValidateContainerName returns an error if the name contains characters
+// that could be exploited in shell command interpolation on the remote host.
+// Valid names start with an alphanumeric and contain only alphanumerics,
+// underscores, dots, and hyphens.
+func ValidateContainerName(name string) error {
+	if name == "" {
+		return fmt.Errorf("container name must not be empty")
+	}
+	if !containerNameRe.MatchString(name) {
+		return fmt.Errorf("invalid container name %q: only alphanumerics, underscores, dots, and hyphens are allowed", name)
+	}
+	return nil
+}
 
 // ComposeVars holds the variables injected into Docker Compose templates.
 type ComposeVars struct {
@@ -54,6 +73,10 @@ func generatePassword(length int) string {
 // DeploySite renders a compose template, uploads it to the remote server via
 // SFTP, and runs docker compose up to start the site containers.
 func DeploySite(host string, port int, user string, keyPath string, hostKey string, domain string, templateSlug string, containerName string, sitePort int) error {
+	if err := ValidateContainerName(containerName); err != nil {
+		return err
+	}
+
 	vars := ComposeVars{
 		ContainerName:  containerName,
 		Port:           sitePort,
@@ -104,6 +127,10 @@ func DeploySite(host string, port int, user string, keyPath string, hostKey stri
 
 // StopSiteRemote stops the site containers on a remote server.
 func StopSiteRemote(host string, port int, user string, keyPath string, hostKey string, containerName string) error {
+	if err := ValidateContainerName(containerName); err != nil {
+		return err
+	}
+
 	sshClient, err := sshutil.NewClientWithHostKey(host, port, user, keyPath, hostKey)
 	if err != nil {
 		return fmt.Errorf("SSH connect failed: %w", err)
@@ -119,6 +146,10 @@ func StopSiteRemote(host string, port int, user string, keyPath string, hostKey 
 
 // StartSiteRemote starts the site containers on a remote server.
 func StartSiteRemote(host string, port int, user string, keyPath string, hostKey string, containerName string) error {
+	if err := ValidateContainerName(containerName); err != nil {
+		return err
+	}
+
 	sshClient, err := sshutil.NewClientWithHostKey(host, port, user, keyPath, hostKey)
 	if err != nil {
 		return fmt.Errorf("SSH connect failed: %w", err)
@@ -134,6 +165,10 @@ func StartSiteRemote(host string, port int, user string, keyPath string, hostKey
 
 // RestartSiteRemote restarts the site containers on a remote server.
 func RestartSiteRemote(host string, port int, user string, keyPath string, hostKey string, containerName string) error {
+	if err := ValidateContainerName(containerName); err != nil {
+		return err
+	}
+
 	sshClient, err := sshutil.NewClientWithHostKey(host, port, user, keyPath, hostKey)
 	if err != nil {
 		return fmt.Errorf("SSH connect failed: %w", err)
@@ -149,6 +184,10 @@ func RestartSiteRemote(host string, port int, user string, keyPath string, hostK
 
 // RemoveSiteRemote tears down the site containers and removes volumes on a remote server.
 func RemoveSiteRemote(host string, port int, user string, keyPath string, hostKey string, containerName string) error {
+	if err := ValidateContainerName(containerName); err != nil {
+		return err
+	}
+
 	sshClient, err := sshutil.NewClientWithHostKey(host, port, user, keyPath, hostKey)
 	if err != nil {
 		return fmt.Errorf("SSH connect failed: %w", err)

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"ezweb/internal/docker"
@@ -16,6 +17,8 @@ import (
 
 	dockertypes "github.com/docker/docker/api/types/container"
 )
+
+const maxConcurrentChecks = 10
 
 type Checker struct {
 	DB             *sql.DB
@@ -26,6 +29,8 @@ type Checker struct {
 	failures       map[int]int
 	alertedSites   map[int]bool
 	mu             sync.Mutex
+	semaphore      chan struct{}
+	running        atomic.Int32
 }
 
 func NewChecker(db *sql.DB, interval time.Duration, webhookURL string, webhookFormat string, alertThreshold int) *Checker {
@@ -44,6 +49,7 @@ func NewChecker(db *sql.DB, interval time.Duration, webhookURL string, webhookFo
 		AlertThreshold: alertThreshold,
 		failures:       make(map[int]int),
 		alertedSites:   make(map[int]bool),
+		semaphore:      make(chan struct{}, maxConcurrentChecks),
 	}
 }
 
@@ -65,8 +71,17 @@ func (ch *Checker) Start(ctx context.Context) {
 }
 
 func (ch *Checker) checkAll() {
-	// Prune health checks older than 30 days
+	// Skip this cycle if the previous round has not finished yet.
+	if !ch.running.CompareAndSwap(0, 1) {
+		log.Println("Health checker: previous round still running, skipping cycle")
+		return
+	}
+	defer ch.running.Store(0)
+
+	// Prune health checks older than 30 days.
 	ch.DB.Exec("DELETE FROM health_checks WHERE checked_at < datetime('now', '-30 days')")
+	// Prune activity log entries older than 90 days.
+	ch.DB.Exec("DELETE FROM activity_log WHERE created_at < datetime('now', '-90 days')")
 
 	sites, err := models.GetAllSites(ch.DB)
 	if err != nil {
@@ -74,12 +89,21 @@ func (ch *Checker) checkAll() {
 		return
 	}
 
+	var wg sync.WaitGroup
 	for _, site := range sites {
 		if site.Status == "pending" {
 			continue
 		}
-		go ch.checkSite(site)
+		wg.Add(1)
+		// Acquire a semaphore slot before launching to cap concurrency.
+		ch.semaphore <- struct{}{}
+		go func(s models.Site) {
+			defer wg.Done()
+			defer func() { <-ch.semaphore }()
+			ch.checkSite(s)
+		}(site)
 	}
+	wg.Wait()
 }
 
 func (ch *Checker) checkSite(site models.Site) {
@@ -119,36 +143,52 @@ func (ch *Checker) checkSite(site models.Site) {
 		log.Printf("Health checker: failed to save check for site %d: %v", site.ID, err)
 	}
 
-	isDown := hc.HTTPStatus == 0 || hc.HTTPStatus >= 500 || hc.ContainerStatus == "not_found" || hc.ContainerStatus == "exited"
+	// Align with MCP definition: any 4xx or 5xx response, or a network failure
+	// (status 0), is treated as the site being down.
+	isDown := hc.HTTPStatus == 0 || hc.HTTPStatus >= 400 || hc.ContainerStatus == "not_found" || hc.ContainerStatus == "exited"
+
+	// Hold the lock across the entire read-modify-decide block so that the
+	// failure counter and the alerted flag are always updated atomically.
+	// Only the webhook I/O (which can block) is performed outside the lock.
+	var shouldAlert bool
+	var shouldRecover bool
 
 	ch.mu.Lock()
 	if isDown {
 		ch.failures[site.ID]++
 		count := ch.failures[site.ID]
 		alerted := ch.alertedSites[site.ID]
-		ch.mu.Unlock()
-
-		if count >= ch.AlertThreshold && !alerted && ch.Webhook != nil {
-			errMsg := fmt.Sprintf("HTTP: %d, Container: %s", hc.HTTPStatus, hc.ContainerStatus)
-			if err := ch.Webhook.SendAlert(site.Domain, count, errMsg); err != nil {
-				log.Printf("Webhook alert failed for %s: %v", site.Domain, err)
-			} else {
-				ch.mu.Lock()
-				ch.alertedSites[site.ID] = true
-				ch.mu.Unlock()
-			}
+		if count >= ch.AlertThreshold && !alerted {
+			// Mark as alerted now, before releasing the lock, so a concurrent
+			// goroutine racing on the same site cannot also trigger an alert.
+			ch.alertedSites[site.ID] = true
+			shouldAlert = true
 		}
 	} else {
 		wasDown := ch.failures[site.ID] > 0
 		alerted := ch.alertedSites[site.ID]
 		ch.failures[site.ID] = 0
 		ch.alertedSites[site.ID] = false
-		ch.mu.Unlock()
+		shouldRecover = wasDown && alerted
+	}
+	ch.mu.Unlock()
 
-		if wasDown && alerted && ch.Webhook != nil {
-			if err := ch.Webhook.SendRecovery(site.Domain); err != nil {
-				log.Printf("Webhook recovery failed for %s: %v", site.Domain, err)
-			}
+	// Perform webhook I/O outside the lock to avoid holding it during network
+	// calls, which could block other goroutines from updating their state.
+	if shouldAlert && ch.Webhook != nil {
+		errMsg := fmt.Sprintf("HTTP: %d, Container: %s", hc.HTTPStatus, hc.ContainerStatus)
+		if err := ch.Webhook.SendAlert(site.Domain, ch.failures[site.ID], errMsg); err != nil {
+			log.Printf("Webhook alert failed for %s: %v", site.Domain, err)
+			// Roll back the alerted flag so the next cycle can retry.
+			ch.mu.Lock()
+			ch.alertedSites[site.ID] = false
+			ch.mu.Unlock()
+		}
+	}
+
+	if shouldRecover && ch.Webhook != nil {
+		if err := ch.Webhook.SendRecovery(site.Domain); err != nil {
+			log.Printf("Webhook recovery failed for %s: %v", site.Domain, err)
 		}
 	}
 }

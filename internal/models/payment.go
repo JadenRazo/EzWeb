@@ -153,7 +153,7 @@ func DeletePayment(db *sql.DB, id int) error {
 func CountOverduePayments(db *sql.DB) (int, error) {
 	var count int
 	err := db.QueryRow(
-		"SELECT COUNT(*) FROM payments WHERE status != 'paid' AND due_date < date('now')",
+		"SELECT COUNT(*) FROM payments WHERE paid_at IS NULL AND due_date < date('now')",
 	).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count overdue payments: %w", err)

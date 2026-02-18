@@ -94,8 +94,13 @@ func RunCommand(client *ssh.Client, cmd string) (string, error) {
 // TestConnection verifies SSH access and checks for a running Docker daemon
 // by executing `docker info` on the remote host. Returns the Docker server
 // version string on success.
-func TestConnection(host string, port int, user string, keyPath string) (string, error) {
-	client, err := NewClient(host, port, user, keyPath)
+//
+// If hostKey is non-empty, the connection is verified against the stored
+// public key (pinned TOFU). If hostKey is empty (first-time probe), the
+// connection falls back to InsecureIgnoreHostKey so the caller can then
+// persist the key via GetHostKey.
+func TestConnection(host string, port int, user string, keyPath string, hostKey string) (string, error) {
+	client, err := NewClientWithHostKey(host, port, user, keyPath, hostKey)
 	if err != nil {
 		return "", err
 	}

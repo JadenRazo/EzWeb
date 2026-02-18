@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -36,14 +38,37 @@ func CreateUser(db *sql.DB, username, hashedPassword string) error {
 	return nil
 }
 
-func EnsureAdminExists(db *sql.DB, username, hashedPassword string) error {
-	var exists int
-	err := db.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", username).Scan(&exists)
+// EnsureAdminExists creates the admin user if it doesn't exist, or updates
+// the stored password hash when the configured plain-text password no longer
+// matches — so changes to ADMIN_PASS in .env take effect on restart.
+func EnsureAdminExists(db *sql.DB, username, plainPassword string) error {
+	var currentHash string
+	err := db.QueryRow("SELECT password FROM users WHERE username = ?", username).Scan(&currentHash)
+
+	if err == sql.ErrNoRows {
+		// User doesn't exist yet — create it.
+		hash, err := bcrypt.GenerateFromPassword([]byte(plainPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("failed to hash admin password: %w", err)
+		}
+		return CreateUser(db, username, string(hash))
+	}
 	if err != nil {
 		return fmt.Errorf("failed to check admin existence: %w", err)
 	}
-	if exists == 0 {
-		return CreateUser(db, username, hashedPassword)
+
+	// User exists — check whether the stored hash still matches the configured password.
+	if bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(plainPassword)) != nil {
+		// Hash mismatch: the .env password was changed, so re-hash and update.
+		hash, err := bcrypt.GenerateFromPassword([]byte(plainPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("failed to hash updated admin password: %w", err)
+		}
+		_, err = db.Exec("UPDATE users SET password = ? WHERE username = ?", string(hash), username)
+		if err != nil {
+			return fmt.Errorf("failed to update admin password: %w", err)
+		}
 	}
+
 	return nil
 }

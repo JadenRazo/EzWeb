@@ -39,9 +39,9 @@ CREATE TABLE IF NOT EXISTS customers (
 CREATE TABLE IF NOT EXISTS sites (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     domain TEXT NOT NULL UNIQUE,
-    server_id INTEGER REFERENCES servers(id),
+    server_id INTEGER REFERENCES servers(id) ON DELETE SET NULL,
     template_slug TEXT,
-    customer_id INTEGER REFERENCES customers(id),
+    customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
     container_name TEXT,
     port INTEGER,
     status TEXT DEFAULT 'pending',
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS sites (
 
 CREATE TABLE IF NOT EXISTS payments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    customer_id INTEGER NOT NULL REFERENCES customers(id),
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     site_id INTEGER REFERENCES sites(id),
     amount REAL NOT NULL,
     due_date DATE NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS payments (
 
 CREATE TABLE IF NOT EXISTS health_checks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    site_id INTEGER NOT NULL REFERENCES sites(id),
+    site_id INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
     http_status INTEGER,
     latency_ms INTEGER,
     container_status TEXT,
@@ -88,6 +88,7 @@ CREATE INDEX IF NOT EXISTS idx_health_checks_checked_at ON health_checks(checked
 CREATE INDEX IF NOT EXISTS idx_sites_server_id ON sites(server_id);
 CREATE INDEX IF NOT EXISTS idx_sites_customer_id ON sites(customer_id);
 CREATE INDEX IF NOT EXISTS idx_sites_status ON sites(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sites_port_unique ON sites(port) WHERE port > 0;
 CREATE INDEX IF NOT EXISTS idx_payments_customer_id ON payments(customer_id);
 CREATE INDEX IF NOT EXISTS idx_payments_due_date ON payments(due_date);
 CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at);

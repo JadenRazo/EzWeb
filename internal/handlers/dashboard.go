@@ -18,7 +18,7 @@ func Dashboard(db *sql.DB) fiber.Handler {
 		_ = db.QueryRow("SELECT COUNT(*) FROM customers").Scan(&customerCount)
 		_ = db.QueryRow("SELECT COUNT(*) FROM sites").Scan(&siteCount)
 		_ = db.QueryRow("SELECT COUNT(*) FROM servers").Scan(&serverCount)
-		_ = db.QueryRow("SELECT COUNT(*) FROM payments WHERE status = 'pending' AND due_date < date('now')").Scan(&overdueCount)
+		_ = db.QueryRow("SELECT COUNT(*) FROM payments WHERE paid_at IS NULL AND due_date < date('now')").Scan(&overdueCount)
 		_ = db.QueryRow("SELECT COUNT(*) FROM sites WHERE status = 'running'").Scan(&runningCount)
 		_ = db.QueryRow("SELECT COUNT(*) FROM sites WHERE status = 'stopped'").Scan(&stoppedCount)
 		_ = db.QueryRow("SELECT COUNT(*) FROM sites WHERE status = 'error'").Scan(&errorCount)

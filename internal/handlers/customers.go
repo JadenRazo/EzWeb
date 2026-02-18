@@ -144,6 +144,16 @@ func DeleteCustomer(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusNotFound).SendString("Customer not found")
 		}
 
+		// Detach sites from this customer rather than leaving a dangling FK.
+		if _, err := db.Exec("UPDATE sites SET customer_id = NULL WHERE customer_id = ?", id); err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to detach customer sites")
+		}
+
+		// Remove payments owned by this customer — they have no meaning without their owner.
+		if _, err := db.Exec("DELETE FROM payments WHERE customer_id = ?", id); err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to remove customer payments")
+		}
+
 		if err := models.DeleteCustomer(db, id); err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete customer")
 		}

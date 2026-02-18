@@ -48,13 +48,19 @@ func LoginPost(db *sql.DB, cfg *config.Config) fiber.Handler {
 	}
 }
 
-func Logout(c *fiber.Ctx) error {
-	c.Cookie(&fiber.Cookie{
-		Name:     "token",
-		Value:    "",
-		HTTPOnly: true,
-		Expires:  time.Now().Add(-1 * time.Hour),
-		Path:     "/",
-	})
-	return c.Redirect("/login")
+// Logout returns a handler that clears the session cookie with the same
+// attributes used when setting it, so the browser actually removes the cookie.
+func Logout(cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		c.Cookie(&fiber.Cookie{
+			Name:     "token",
+			Value:    "",
+			HTTPOnly: true,
+			Secure:   cfg.SecureCookies,
+			SameSite: "Lax",
+			Expires:  time.Now().Add(-1 * time.Hour),
+			Path:     "/",
+		})
+		return c.Redirect("/login")
+	}
 }

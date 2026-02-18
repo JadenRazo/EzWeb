@@ -88,6 +88,10 @@ func CreateSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 			containerName = strings.ReplaceAll(domain, ".", "-")
 		}
 
+		if err := docker.ValidateContainerName(containerName); err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid container name: " + err.Error())
+		}
+
 		port, err := strconv.Atoi(c.FormValue("port", "0"))
 		if err != nil || port == 0 {
 			port, err = nextAvailablePort(db)
@@ -398,6 +402,13 @@ func DeleteSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 
 		domain := site.Domain
 
+		// Remove health check history before deleting the site — health checks
+		// are meaningless without their associated site.
+		if _, err := db.Exec("DELETE FROM health_checks WHERE site_id = ?", id); err != nil {
+			log.Printf("failed to remove health checks for site %d: %v", id, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to remove site health checks")
+		}
+
 		if err := models.DeleteSite(db, id); err != nil {
 			log.Printf("failed to delete site %d: %v", id, err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete site")
@@ -521,14 +532,32 @@ func UpdateSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 	}
 }
 
+// nextAvailablePort returns the next unused port starting from 8080.
+// The SELECT runs inside a transaction so concurrent site creations read a
+// consistent snapshot of the current maximum, reducing (though not eliminating)
+// the window for a port collision. The UNIQUE index on sites(port) acts as the
+// final guard — the INSERT will fail fast on a true collision and the caller
+// can surface an appropriate error.
 func nextAvailablePort(db *sql.DB) (int, error) {
-	var maxPort sql.NullInt64
-	err := db.QueryRow("SELECT MAX(port) FROM sites").Scan(&maxPort)
+	tx, err := db.Begin()
 	if err != nil {
-		return 8080, err
+		return 0, err
 	}
-	if !maxPort.Valid || maxPort.Int64 < 8080 {
-		return 8080, nil
+	defer tx.Rollback() //nolint:errcheck
+
+	var maxPort sql.NullInt64
+	if err := tx.QueryRow("SELECT MAX(port) FROM sites").Scan(&maxPort); err != nil {
+		return 0, err
 	}
-	return int(maxPort.Int64) + 1, nil
+
+	port := 8080
+	if maxPort.Valid && maxPort.Int64 >= 8080 {
+		port = int(maxPort.Int64) + 1
+	}
+
+	// Commit the read-only transaction; the actual write happens in CreateSite.
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return port, nil
 }

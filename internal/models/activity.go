@@ -65,7 +65,6 @@ func BackfillActivities(db *sql.DB) {
 	// Backfill sites
 	rows, err := db.Query("SELECT id, domain, status, created_at FROM sites ORDER BY created_at ASC")
 	if err == nil {
-		defer rows.Close()
 		for rows.Next() {
 			var id int
 			var domain, status, createdAt string
@@ -76,12 +75,12 @@ func BackfillActivities(db *sql.DB) {
 				}
 			}
 		}
+		rows.Close()
 	}
 
 	// Backfill servers
 	sRows, err := db.Query("SELECT id, name, created_at FROM servers ORDER BY created_at ASC")
 	if err == nil {
-		defer sRows.Close()
 		for sRows.Next() {
 			var id int
 			var name, createdAt string
@@ -89,12 +88,12 @@ func BackfillActivities(db *sql.DB) {
 				LogActivityAt(db, "server", id, "created", "Added server "+name, createdAt)
 			}
 		}
+		sRows.Close()
 	}
 
 	// Backfill customers
 	cRows, err := db.Query("SELECT id, name, created_at FROM customers ORDER BY created_at ASC")
 	if err == nil {
-		defer cRows.Close()
 		for cRows.Next() {
 			var id int
 			var name, createdAt string
@@ -102,6 +101,7 @@ func BackfillActivities(db *sql.DB) {
 				LogActivityAt(db, "customer", id, "created", "Customer "+name+" added", createdAt)
 			}
 		}
+		cRows.Close()
 	}
 
 	log.Println("Activity log backfill complete")

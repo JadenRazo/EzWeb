@@ -35,12 +35,9 @@ func main() {
 	}
 	defer database.Close()
 
-	hashedPass, err := auth.HashPassword(cfg.AdminPass)
-	if err != nil {
-		log.Fatalf("Failed to hash admin password: %v", err)
-	}
-
-	if err := models.EnsureAdminExists(database, cfg.AdminUser, hashedPass); err != nil {
+	// EnsureAdminExists hashes the password internally and updates the stored
+	// hash when the .env password has changed since the last run.
+	if err := models.EnsureAdminExists(database, cfg.AdminUser, cfg.AdminPass); err != nil {
 		log.Fatalf("Failed to ensure admin user: %v", err)
 	}
 
@@ -57,6 +54,17 @@ func main() {
 	go checker.Start(ctx)
 
 	app := fiber.New(fiber.Config{
+		// Trust X-Forwarded-For from local reverse proxies (e.g. Caddy) so
+		// the rate limiter sees the real client IP instead of 127.0.0.1.
+		ProxyHeader:    "X-Forwarded-For",
+		TrustedProxies: []string{"127.0.0.1", "::1"},
+
+		// Server-side timeouts.  WriteTimeout is generous to accommodate the
+		// SSE deploy stream, which can run for several minutes.
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 10 * time.Minute,
+		IdleTimeout:  60 * time.Second,
+
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {
@@ -73,6 +81,11 @@ func main() {
 	// Static files
 	app.Static("/static", "./static")
 
+	// Health probe — unauthenticated, before any auth middleware.
+	app.Get("/healthz", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"status": "ok"})
+	})
+
 	// Rate limit on login
 	loginLimiter := limiter.New(limiter.Config{
 		Max:        10,
@@ -85,7 +98,7 @@ func main() {
 	// Public routes
 	app.Get("/login", handlers.LoginPage)
 	app.Post("/login", loginLimiter, handlers.LoginPost(database, cfg))
-	app.Get("/logout", handlers.Logout)
+	app.Get("/logout", handlers.Logout(cfg))
 
 	// Protected routes
 	protected := app.Group("/", auth.AuthMiddleware(cfg.JWTSecret))

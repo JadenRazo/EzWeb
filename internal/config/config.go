@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 
@@ -44,6 +45,9 @@ func Load() (*Config, error) {
 	}
 	if cfg.AdminPass == "" {
 		return nil, fmt.Errorf("ADMIN_PASS is required")
+	}
+	if len(cfg.AdminPass) < 8 {
+		log.Println("WARNING: ADMIN_PASS is shorter than 8 characters — use a stronger password in production")
 	}
 
 	return cfg, nil

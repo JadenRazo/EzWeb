@@ -45,7 +45,7 @@ func GetSiteLogs(db *sql.DB) fiber.Handler {
 				return c.Status(500).SendString("Failed to get server")
 			}
 
-			client, err := sshutil.NewClient(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath)
+			client, err := sshutil.NewClientWithHostKey(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey)
 			if err != nil {
 				return c.Status(500).SendString("SSH connection failed: " + err.Error())
 			}

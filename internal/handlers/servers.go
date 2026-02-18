@@ -162,6 +162,13 @@ func DeleteServerHandler(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusNotFound).SendString("Server not found")
 		}
 
+		// Detach sites from this server so they retain their configuration but
+		// are no longer associated with a now-deleted server.
+		if _, err := db.Exec("UPDATE sites SET server_id = NULL WHERE server_id = ?", id); err != nil {
+			log.Printf("failed to detach sites from server %d: %v", id, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to detach server sites")
+		}
+
 		if err := models.DeleteServer(db, id); err != nil {
 			log.Printf("failed to delete server %d: %v", id, err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete server")
@@ -189,7 +196,7 @@ func TestServerConnection(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusNotFound).SendString("Server not found")
 		}
 
-		version, err := sshutil.TestConnection(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath)
+		version, err := sshutil.TestConnection(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey)
 		status := "online"
 		if err != nil {
 			log.Printf("connection test failed for server %d (%s): %v", id, server.Host, err)

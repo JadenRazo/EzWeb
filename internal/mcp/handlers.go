@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"ezweb/internal/docker"
 	"ezweb/internal/models"
@@ -91,7 +92,7 @@ func (h *handlers) getSiteLogs(_ context.Context, req mcp.CallToolRequest) (*mcp
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("server not found: %v", err)), nil
 		}
-		client, err := sshutil.NewClient(srv.Host, srv.SSHPort, srv.SSHUser, srv.SSHKeyPath)
+		client, err := sshutil.NewClientWithHostKey(srv.Host, srv.SSHPort, srv.SSHUser, srv.SSHKeyPath, srv.SSHHostKey)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("SSH connection failed: %v", err)), nil
 		}
@@ -289,7 +290,7 @@ func (h *handlers) getServerStatus(_ context.Context, req mcp.CallToolRequest) (
 		return mcp.NewToolResultError(fmt.Sprintf("server not found: %v", err)), nil
 	}
 
-	dockerVersion, testErr := sshutil.TestConnection(srv.Host, srv.SSHPort, srv.SSHUser, srv.SSHKeyPath)
+	dockerVersion, testErr := sshutil.TestConnection(srv.Host, srv.SSHPort, srv.SSHUser, srv.SSHKeyPath, srv.SSHHostKey)
 
 	status := "online"
 	if testErr != nil {
@@ -319,6 +320,16 @@ func (h *handlers) backupDatabase(_ context.Context, req mcp.CallToolRequest) (*
 	backupPath := "./ezweb.db.bak"
 	if p, ok := args["path"].(string); ok && p != "" {
 		backupPath = p
+	}
+
+	// Reject path traversal attempts.
+	if strings.Contains(backupPath, "..") {
+		return mcp.NewToolResultError("invalid backup path: path must not contain '..'"), nil
+	}
+
+	// Only allow .db and .bak extensions to prevent writing arbitrary files.
+	if !strings.HasSuffix(backupPath, ".db") && !strings.HasSuffix(backupPath, ".bak") {
+		return mcp.NewToolResultError("invalid backup path: path must end with .db or .bak"), nil
 	}
 
 	// Use SQLite's built-in online backup via VACUUM INTO, which produces a

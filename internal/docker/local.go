@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"time"
 )
 
 func runCompose(ctx context.Context, composePath string, args ...string) (string, error) {
@@ -17,10 +16,6 @@ func runCompose(ctx context.Context, composePath string, args ...string) (string
 		return string(out), fmt.Errorf("docker compose %s failed in %s: %w\n%s", strings.Join(args, " "), composePath, err, string(out))
 	}
 	return string(out), nil
-}
-
-func localComposeCtx() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 2*time.Minute)
 }
 
 func LocalComposeUp(ctx context.Context, composePath string) error {
