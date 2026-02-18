@@ -1,0 +1,33 @@
+version: "3.8"
+services:
+  ghost:
+    image: ghost:5-alpine
+    container_name: "{{.ContainerName}}"
+    restart: unless-stopped
+    ports:
+      - "{{.Port}}:2368"
+    environment:
+      url: "http://{{.Domain}}"
+      database__client: mysql
+      database__connection__host: "{{.ContainerName}}-db"
+      database__connection__user: ghost
+      database__connection__password: "{{.DBPassword}}"
+      database__connection__database: ghost
+    volumes:
+      - "{{.ContainerName}}-data:/var/lib/ghost/content"
+    depends_on:
+      - db
+  db:
+    image: mysql:8.0
+    container_name: "{{.ContainerName}}-db"
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ghost
+      MYSQL_USER: ghost
+      MYSQL_PASSWORD: "{{.DBPassword}}"
+      MYSQL_ROOT_PASSWORD: "{{.DBRootPassword}}"
+    volumes:
+      - "{{.ContainerName}}-dbdata:/var/lib/mysql"
+volumes:
+  {{.ContainerName}}-data:
+  {{.ContainerName}}-dbdata:

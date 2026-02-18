@@ -1,0 +1,15 @@
+{
+  "name": "ezweb",
+  "version": "1.0.0",
+  "description": "A self-contained platform for managing client website contracts. Orchestrates Docker containers across multiple VPS machines via SSH, provides ready-to-go templates for popular site types, and tracks customers/payments.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

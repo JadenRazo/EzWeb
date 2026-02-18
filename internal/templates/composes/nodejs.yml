@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  app:
+    image: node:20-alpine
+    container_name: "{{.ContainerName}}"
+    restart: unless-stopped
+    ports:
+      - "{{.Port}}:3000"
+    working_dir: /app
+    volumes:
+      - "{{.ContainerName}}-data:/app"
+    command: ["node", "index.js"]
+volumes:
+  {{.ContainerName}}-data:

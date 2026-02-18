@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  web:
+    image: nginx:alpine
+    container_name: "{{.ContainerName}}"
+    restart: unless-stopped
+    ports:
+      - "{{.Port}}:80"
+    volumes:
+      - "{{.ContainerName}}-data:/usr/share/nginx/html"
+      - "{{.ContainerName}}-nginx-conf:/etc/nginx/conf.d"
+volumes:
+  {{.ContainerName}}-data:
+  {{.ContainerName}}-nginx-conf:

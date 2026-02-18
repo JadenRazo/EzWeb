@@ -1,0 +1,322 @@
+package pages
+
+import (
+	"ezweb/internal/models"
+	"ezweb/views/components"
+	"ezweb/views/layouts"
+	"ezweb/views/partials"
+	"strconv"
+)
+
+templ Sites(sites []models.Site, servers []models.Server, templates []models.SiteTemplate, customers []models.Customer) {
+	@layouts.Base("Sites") {
+		<div class="flex min-h-screen">
+			@components.Navbar("/sites")
+			<main class="flex-1 p-6 lg:p-10" x-data="siteFilter()">
+				<div class="flex items-center justify-between mb-8">
+					<div>
+						<h2 class="text-2xl font-bold text-gray-900">Sites</h2>
+						<p class="text-sm text-gray-500 mt-1">
+							Manage your deployed websites and their server assignments
+							<span class="ml-2 text-xs text-gray-400" x-show="searchQuery || statusFilter !== 'all' || typeFilter !== 'all'" x-cloak>
+								— Showing <span x-text="visibleCount"></span> of { strconv.Itoa(len(sites)) }
+							</span>
+						</p>
+					</div>
+					<button
+						@click="$dispatch('open-modal', { id: 'add-site' })"
+						class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-150"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+						</svg>
+						Add Site
+					</button>
+				</div>
+
+				<!-- Search & Filter Bar -->
+				<div class="mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+					<div class="flex-1 min-w-[200px]">
+						<input
+							type="text"
+							placeholder="Search by domain..."
+							x-model="searchQuery"
+							class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+						/>
+					</div>
+					<select
+						x-model="statusFilter"
+						class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none"
+					>
+						<option value="all">All statuses</option>
+						<option value="running">Running</option>
+						<option value="stopped">Stopped</option>
+						<option value="pending">Pending</option>
+						<option value="error">Error</option>
+						<option value="deploying">Deploying</option>
+					</select>
+					<select
+						x-model="typeFilter"
+						class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none"
+					>
+						<option value="all">All types</option>
+						<option value="local">Local</option>
+						<option value="remote">Remote</option>
+					</select>
+					<button
+						x-show="searchQuery || statusFilter !== 'all' || typeFilter !== 'all'"
+						x-cloak
+						@click="searchQuery = ''; statusFilter = 'all'; typeFilter = 'all'"
+						class="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+					>
+						Clear
+					</button>
+				</div>
+
+				@components.Card("") {
+					@components.Table() {
+						<thead>
+							<tr class="bg-gray-50 border-b border-gray-200">
+								<th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Domain</th>
+								<th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+								<th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Server</th>
+								<th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Template</th>
+								<th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+								<th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+							</tr>
+						</thead>
+						<tbody id="site-list">
+							if len(sites) == 0 {
+								<tr>
+									<td colspan="6" class="px-6 py-16 text-center">
+										<div class="flex flex-col items-center gap-3">
+											<div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+												<svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+													<path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918"/>
+												</svg>
+											</div>
+											<p class="text-sm font-medium text-gray-900">No sites yet</p>
+											<p class="text-xs text-gray-400">Get started by adding your first site.</p>
+										</div>
+									</td>
+								</tr>
+							}
+							for _, s := range sites {
+								@partials.SiteRow(s)
+							}
+						</tbody>
+					}
+				}
+
+				<script>
+				function siteFilter() {
+					return {
+						searchQuery: '',
+						statusFilter: 'all',
+						typeFilter: 'all',
+						get visibleCount() {
+							return this.filterRows();
+						},
+						filterRows() {
+							var rows = document.querySelectorAll('#site-list tr[data-domain]');
+							var count = 0;
+							var q = this.searchQuery.toLowerCase();
+							var sf = this.statusFilter;
+							var tf = this.typeFilter;
+							rows.forEach(function(row) {
+								var domain = row.getAttribute('data-domain') || '';
+								var status = row.getAttribute('data-status') || '';
+								var type = row.getAttribute('data-type') || '';
+								var show = true;
+								if (q && domain.indexOf(q) === -1) show = false;
+								if (sf !== 'all' && status !== sf) show = false;
+								if (tf !== 'all' && type !== tf) show = false;
+								row.style.display = show ? '' : 'none';
+								if (show) count++;
+							});
+							return count;
+						},
+						init() {
+							this.$watch('searchQuery', () => this.filterRows());
+							this.$watch('statusFilter', () => this.filterRows());
+							this.$watch('typeFilter', () => this.filterRows());
+						}
+					}
+				}
+				</script>
+
+				@components.Modal("add-site", "Add Site") {
+					<form
+						hx-post="/sites"
+						hx-target="#site-list"
+						hx-swap="beforeend"
+						@htmx:after-request="if(event.detail.successful) $dispatch('close-modal')"
+						class="space-y-5"
+						x-data="{ isLocal: false }"
+					>
+						<div>
+							<label for="domain" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Domain</label>
+							<input type="text" id="domain" name="domain" required
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+								placeholder="example.com"/>
+						</div>
+						<div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+							<input type="checkbox" id="is_local" name="is_local" value="1" x-model="isLocal"
+								class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"/>
+							<label for="is_local" class="text-sm font-medium text-gray-700">Local site (Docker on this machine)</label>
+						</div>
+						<div x-show="isLocal">
+							<label for="compose_path" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Compose Path</label>
+							<input type="text" id="compose_path" name="compose_path"
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+								placeholder="/path/to/compose/project"/>
+						</div>
+						<div x-show="!isLocal">
+							<label for="template_slug" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Template</label>
+							<select id="template_slug" name="template_slug"
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none">
+								<option value="">Select a template...</option>
+								for _, t := range templates {
+									<option value={ t.Slug }>{ t.Label }</option>
+								}
+							</select>
+						</div>
+						<div x-show="!isLocal">
+							<label for="server_id" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Server</label>
+							<select id="server_id" name="server_id"
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none">
+								<option value="">No server (assign later)</option>
+								for _, srv := range servers {
+									<option value={ strconv.Itoa(srv.ID) }>{ srv.Name } ({ srv.Host })</option>
+								}
+							</select>
+						</div>
+						<div>
+							<label for="customer_id" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Customer</label>
+							<select id="customer_id" name="customer_id"
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none">
+								<option value="">No customer (assign later)</option>
+								for _, cust := range customers {
+									<option value={ strconv.Itoa(cust.ID) }>{ cust.Name }</option>
+								}
+							</select>
+						</div>
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label for="container_name" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Container Name</label>
+								<input type="text" id="container_name" name="container_name"
+									class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+									placeholder="Auto-generated"/>
+							</div>
+							<div>
+								<label for="port" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Port</label>
+								<input type="number" id="port" name="port"
+									class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+									placeholder="Auto-assigned"/>
+							</div>
+						</div>
+						<div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
+							<button type="button" @click="$dispatch('close-modal')"
+								class="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">
+								Cancel
+							</button>
+							<button type="submit"
+								class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150">
+								Add Site
+							</button>
+						</div>
+					</form>
+				}
+			</main>
+		</div>
+	}
+}
+
+templ SiteForm(servers []models.Server, templates []models.SiteTemplate, customers []models.Customer) {
+	@layouts.Base("New Site") {
+		<div class="flex min-h-screen">
+			@components.Navbar("/sites")
+			<main class="flex-1 p-6 lg:p-10">
+				<div class="mb-8">
+					<h2 class="text-2xl font-bold text-gray-900">New Site</h2>
+					<p class="text-sm text-gray-500 mt-1">Configure and deploy a new website</p>
+				</div>
+				@components.Card("Site Configuration") {
+					<form action="/sites" method="POST" class="space-y-5" x-data="{ isLocal: false }">
+						<div>
+							<label for="domain" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Domain</label>
+							<input type="text" id="domain" name="domain" required
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+								placeholder="example.com"/>
+						</div>
+						<div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+							<input type="checkbox" id="is_local_form" name="is_local" value="1" x-model="isLocal"
+								class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"/>
+							<label for="is_local_form" class="text-sm font-medium text-gray-700">Local site (Docker on this machine)</label>
+						</div>
+						<div x-show="isLocal">
+							<label for="compose_path_form" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Compose Path</label>
+							<input type="text" id="compose_path_form" name="compose_path"
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+								placeholder="/path/to/compose/project"/>
+						</div>
+						<div x-show="!isLocal">
+							<label for="template_slug" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Template</label>
+							<select id="template_slug" name="template_slug"
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none">
+								<option value="">Select a template...</option>
+								for _, t := range templates {
+									<option value={ t.Slug }>{ t.Label } - { t.Description }</option>
+								}
+							</select>
+						</div>
+						<div x-show="!isLocal">
+							<label for="server_id" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Server</label>
+							<select id="server_id" name="server_id"
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none">
+								<option value="">No server (assign later)</option>
+								for _, srv := range servers {
+									<option value={ strconv.Itoa(srv.ID) }>{ srv.Name } ({ srv.Host })</option>
+								}
+							</select>
+						</div>
+						<div>
+							<label for="customer_id" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Customer</label>
+							<select id="customer_id" name="customer_id"
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none">
+								<option value="">No customer (assign later)</option>
+								for _, cust := range customers {
+									<option value={ strconv.Itoa(cust.ID) }>{ cust.Name }</option>
+								}
+							</select>
+						</div>
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label for="container_name" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Container Name</label>
+								<input type="text" id="container_name" name="container_name"
+									class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+									placeholder="Auto-generated from domain"/>
+							</div>
+							<div>
+								<label for="port" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Port</label>
+								<input type="number" id="port" name="port"
+									class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+									placeholder="Auto-assigned"/>
+							</div>
+						</div>
+						<div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
+							<a href="/sites"
+								class="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">
+								Cancel
+							</a>
+							<button type="submit"
+								class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150">
+								Create Site
+							</button>
+						</div>
+					</form>
+				}
+			</main>
+		</div>
+	}
+}

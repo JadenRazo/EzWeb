@@ -1,0 +1,49 @@
+/* EzWeb custom styles */
+
+/* Smooth scroll globally */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Page-level fade-in on load */
+body {
+    animation: pageEnter 0.25s ease-out;
+}
+
+@keyframes pageEnter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* HTMX content swap transitions */
+.htmx-swapping {
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+}
+.htmx-settling {
+    opacity: 0;
+}
+main {
+    transition: opacity 0.15s ease-in;
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.htmx-indicator {
+    display: none;
+}
+.htmx-request .htmx-indicator {
+    display: inline-block;
+}
+
+/* Sidebar nav active item glow */
+aside a.bg-blue-600\/90 {
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25), 0 2px 8px rgba(59, 130, 246, 0.2);
+}

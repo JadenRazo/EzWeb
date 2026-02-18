@@ -1,0 +1,238 @@
+package pages
+
+import (
+	"ezweb/internal/models"
+	"ezweb/views/components"
+	"ezweb/views/layouts"
+	"strconv"
+)
+
+type DashboardData struct {
+	CustomerCount string
+	SiteCount     string
+	ServerCount   string
+	OverdueCount  string
+	RunningCount  int
+	StoppedCount  int
+	ErrorCount    int
+	Activities    []models.Activity
+}
+
+func activityIconBg(action string) string {
+	switch action {
+	case "created":
+		return "bg-green-100 text-green-600"
+	case "deployed":
+		return "bg-blue-100 text-blue-600"
+	case "deleted":
+		return "bg-red-100 text-red-600"
+	case "stopped":
+		return "bg-yellow-100 text-yellow-600"
+	case "started":
+		return "bg-green-100 text-green-600"
+	case "updated":
+		return "bg-indigo-100 text-indigo-600"
+	case "restarted":
+		return "bg-orange-100 text-orange-600"
+	case "paid":
+		return "bg-emerald-100 text-emerald-600"
+	default:
+		return "bg-gray-100 text-gray-600"
+	}
+}
+
+templ Dashboard(data DashboardData) {
+	@layouts.Base("Dashboard") {
+		<div class="flex min-h-screen bg-gray-50">
+			@components.Navbar("/dashboard")
+			<main class="flex-1 p-6 lg:p-8 pt-16 lg:pt-8">
+
+				<!-- Page header -->
+				<div class="mb-8 flex items-start justify-between">
+					<div>
+						<h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
+						<p class="text-gray-500 text-sm mt-1" x-data x-text="(() => { const d = new Date(); return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); })()">
+						</p>
+					</div>
+					<div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
+						<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+						<span class="text-xs font-medium text-green-700">All systems operational</span>
+					</div>
+				</div>
+
+				<!-- Stat cards grid -->
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+					@components.StatCard("Customers", data.CustomerCount, "blue")
+					@components.StatCard("Sites", data.SiteCount, "green")
+					@components.StatCard("Servers", data.ServerCount, "yellow")
+					@components.StatCard("Overdue Payments", data.OverdueCount, "red")
+				</div>
+
+				<!-- Site Status Summary -->
+				<div class="flex items-center gap-4 mb-8 px-1">
+					<span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Site Health:</span>
+					<a href="/sites" class="inline-flex items-center gap-1.5 text-sm">
+						<span class="w-2 h-2 rounded-full bg-green-500"></span>
+						<span class="font-medium text-gray-700">{ strconv.Itoa(data.RunningCount) } running</span>
+					</a>
+					<a href="/sites" class="inline-flex items-center gap-1.5 text-sm">
+						<span class="w-2 h-2 rounded-full bg-red-500"></span>
+						<span class="font-medium text-gray-700">{ strconv.Itoa(data.StoppedCount) } stopped</span>
+					</a>
+					<a href="/sites" class="inline-flex items-center gap-1.5 text-sm">
+						<span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+						<span class="font-medium text-gray-700">{ strconv.Itoa(data.ErrorCount) } errored</span>
+					</a>
+				</div>
+
+				<!-- Quick actions + Activity row -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+					<!-- Quick actions (1/3 width on large screens) -->
+					<div class="lg:col-span-1">
+						<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+							<div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+								<h3 class="text-base font-semibold text-gray-900">Quick Actions</h3>
+							</div>
+							<div class="p-4 space-y-2">
+								<a href="/sites" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:border-blue-100 border border-transparent transition-all duration-150 group">
+									<div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 transition-colors shrink-0">
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+											<circle cx="12" cy="12" r="10"></circle>
+											<line x1="2" y1="12" x2="22" y2="12"></line>
+											<path stroke-linecap="round" stroke-linejoin="round" d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+										</svg>
+									</div>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm font-medium text-gray-800">Add New Site</p>
+										<p class="text-xs text-gray-500">Deploy a website to a server</p>
+									</div>
+									<svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"></path>
+									</svg>
+								</a>
+								<a href="/servers" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-yellow-50 hover:border-yellow-100 border border-transparent transition-all duration-150 group">
+									<div class="w-9 h-9 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center group-hover:bg-yellow-100 transition-colors shrink-0">
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+											<rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+											<rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+											<line x1="6" y1="6" x2="6.01" y2="6"></line>
+											<line x1="6" y1="18" x2="6.01" y2="18"></line>
+										</svg>
+									</div>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm font-medium text-gray-800">Add Server</p>
+										<p class="text-xs text-gray-500">Connect a new server</p>
+									</div>
+									<svg class="w-4 h-4 text-gray-400 group-hover:text-yellow-500 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"></path>
+									</svg>
+								</a>
+								<a href="/import" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 hover:border-purple-100 border border-transparent transition-all duration-150 group">
+									<div class="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center group-hover:bg-purple-100 transition-colors shrink-0">
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+											<polyline points="7 10 12 15 17 10"></polyline>
+											<line x1="12" y1="15" x2="12" y2="3"></line>
+										</svg>
+									</div>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm font-medium text-gray-800">Import Data</p>
+										<p class="text-xs text-gray-500">Bulk import customers or sites</p>
+									</div>
+									<svg class="w-4 h-4 text-gray-400 group-hover:text-purple-500 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"></path>
+									</svg>
+								</a>
+								<a href="/customers" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-green-50 hover:border-green-100 border border-transparent transition-all duration-150 group">
+									<div class="w-9 h-9 rounded-lg bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-100 transition-colors shrink-0">
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+											<circle cx="9" cy="7" r="4"></circle>
+										</svg>
+									</div>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm font-medium text-gray-800">Manage Customers</p>
+										<p class="text-xs text-gray-500">View and edit customer records</p>
+									</div>
+									<svg class="w-4 h-4 text-gray-400 group-hover:text-green-500 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"></path>
+									</svg>
+								</a>
+							</div>
+						</div>
+					</div>
+
+					<!-- Recent Activity (2/3 width on large screens) -->
+					<div class="lg:col-span-2">
+						<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-full">
+							<div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+								<h3 class="text-base font-semibold text-gray-900">Recent Activity</h3>
+								<span class="text-xs text-gray-400 font-medium">Latest</span>
+							</div>
+							if len(data.Activities) > 0 {
+								<div class="divide-y divide-gray-100">
+									for _, act := range data.Activities {
+										<div class="px-6 py-3 flex items-center gap-3">
+											<div class={ "w-8 h-8 rounded-full flex items-center justify-center shrink-0", activityIconBg(act.Action) }>
+												if act.Action == "created" {
+													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+												}
+												if act.Action == "deployed" {
+													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>
+												}
+												if act.Action == "deleted" {
+													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+												}
+												if act.Action == "stopped" {
+													<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.5 7.5a3 3 0 013-3h9a3 3 0 013 3v9a3 3 0 01-3 3h-9a3 3 0 01-3-3v-9z" clip-rule="evenodd"/></svg>
+												}
+												if act.Action == "started" {
+													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>
+												}
+												if act.Action == "updated" {
+													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg>
+												}
+												if act.Action == "restarted" {
+													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg>
+												}
+												if act.Action == "paid" {
+													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+												}
+											</div>
+											<div class="flex-1 min-w-0">
+												<p class="text-sm text-gray-800">{ act.Details }</p>
+												<p class="text-xs text-gray-400">{ act.CreatedAt }</p>
+											</div>
+										</div>
+									}
+								</div>
+							} else {
+								<div class="p-8 flex flex-col items-center justify-center min-h-[260px]">
+									<div class="w-16 h-16 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-200 flex items-center justify-center mb-4">
+										<svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"></path>
+										</svg>
+									</div>
+									<p class="text-sm font-semibold text-gray-700 mb-1">No activity yet</p>
+									<p class="text-sm text-gray-400 text-center max-w-xs leading-relaxed">
+										Activity will appear here as you manage your sites, servers, and customers.
+									</p>
+									<div class="mt-6 flex gap-3">
+										<a href="/sites" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors">
+											Add a Site
+										</a>
+										<a href="/customers" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-colors">
+											View Customers
+										</a>
+									</div>
+								</div>
+							}
+						</div>
+					</div>
+				</div>
+
+			</main>
+		</div>
+	}
+}

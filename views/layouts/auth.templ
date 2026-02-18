@@ -1,0 +1,20 @@
+package layouts
+
+templ Auth(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>{ title } | EzWeb</title>
+		<link rel="icon" href="data:,"/>
+		<link rel="stylesheet" href="/static/css/tailwind.css"/>
+		<link rel="stylesheet" href="/static/css/app.css"/>
+		<script defer src="/static/js/alpine.min.js"></script>
+		<script src="/static/js/htmx.min.js"></script>
+	</head>
+	<body class="bg-gray-900 min-h-screen flex items-center justify-center">
+		{ children... }
+	</body>
+	</html>
+}

@@ -1,0 +1,359 @@
+package pages
+
+import (
+	"ezweb/internal/models"
+	"ezweb/views/components"
+	"ezweb/views/layouts"
+	"fmt"
+	"strconv"
+)
+
+func siteStatusColor(status string) string {
+	switch status {
+	case "running":
+		return "green"
+	case "stopped":
+		return "red"
+	case "error":
+		return "red"
+	case "deploying":
+		return "yellow"
+	case "pending":
+		return "gray"
+	default:
+		return "gray"
+	}
+}
+
+templ SiteDetailPage(site models.Site, servers []models.Server, templates []models.SiteTemplate, customers []models.Customer) {
+	@layouts.Base(site.Domain + " - Site Detail") {
+		<div class="flex min-h-screen">
+			@components.Navbar("/sites")
+			<main class="flex-1 p-6 lg:p-10">
+				<div class="flex items-center justify-between mb-8">
+					<div>
+						<div class="flex items-center gap-3">
+							<h2 class="text-2xl font-bold text-gray-900">{ site.Domain }</h2>
+							@components.Badge(site.Status, siteStatusColor(site.Status))
+							if site.IsLocal {
+								@components.Badge("Local", "blue")
+							}
+						</div>
+						<p class="text-gray-500 mt-1">Site details and management</p>
+					</div>
+					<div class="flex items-center gap-3">
+						<button
+							@click="$dispatch('open-modal', { id: 'edit-site' })"
+							class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150"
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+							</svg>
+							Edit
+						</button>
+						<a href="/sites" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors text-sm">
+							Back to Sites
+						</a>
+					</div>
+				</div>
+
+				<!-- Top row: Site Information (wider) + Actions (narrower) -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+					<div class="lg:col-span-2">
+						@components.Card("Site Information") {
+							<dl class="space-y-3">
+								<div class="flex justify-between">
+									<dt class="text-sm font-medium text-gray-500">Domain</dt>
+									<dd class="text-sm text-gray-900">{ site.Domain }</dd>
+								</div>
+								if site.IsLocal {
+									<div class="flex justify-between">
+										<dt class="text-sm font-medium text-gray-500">Type</dt>
+										<dd class="text-sm text-gray-900">Local Docker</dd>
+									</div>
+									if site.ComposePath != "" {
+										<div class="flex justify-between">
+											<dt class="text-sm font-medium text-gray-500">Compose Path</dt>
+											<dd class="text-sm text-gray-900 font-mono text-xs">{ site.ComposePath }</dd>
+										</div>
+									}
+								} else {
+									<div class="flex justify-between">
+										<dt class="text-sm font-medium text-gray-500">Server</dt>
+										<dd class="text-sm text-gray-900">
+											if site.ServerName != "" {
+												{ site.ServerName }
+											} else {
+												<span class="text-gray-400">Not assigned</span>
+											}
+										</dd>
+									</div>
+								}
+								if site.TemplateSlug != "" {
+									<div class="flex justify-between">
+										<dt class="text-sm font-medium text-gray-500">Template</dt>
+										<dd class="text-sm text-gray-900">{ site.TemplateSlug }</dd>
+									</div>
+								}
+								<div class="flex justify-between">
+									<dt class="text-sm font-medium text-gray-500">Customer</dt>
+									<dd class="text-sm text-gray-900">
+										if site.CustomerName != "" {
+											{ site.CustomerName }
+										} else {
+											<span class="text-gray-400">Not assigned</span>
+										}
+									</dd>
+								</div>
+								<div class="flex justify-between">
+									<dt class="text-sm font-medium text-gray-500">Container</dt>
+									<dd class="text-sm text-gray-900 font-mono text-xs">{ site.ContainerName }</dd>
+								</div>
+								if site.Port > 0 {
+									<div class="flex justify-between">
+										<dt class="text-sm font-medium text-gray-500">Port</dt>
+										<dd class="text-sm text-gray-900">{ strconv.Itoa(site.Port) }</dd>
+									</div>
+								}
+								<div class="flex justify-between">
+									<dt class="text-sm font-medium text-gray-500">SSL</dt>
+									<dd class="text-sm text-gray-900">
+										if site.SSLEnabled {
+											@components.Badge("Enabled", "green")
+										} else {
+											@components.Badge("Disabled", "gray")
+										}
+									</dd>
+								</div>
+							</dl>
+						}
+					</div>
+
+					<div class="lg:col-span-1">
+						@components.Card("Actions") {
+							<div class="space-y-3" x-data={ fmt.Sprintf("{ deploying: false, lines: [], done: false, siteId: %d }", site.ID) }>
+								if site.Status == "pending" || site.Status == "error" {
+									<button
+										x-show="!deploying"
+										@click="deploying = true; done = false; lines = [];
+											var es = new EventSource('/sites/' + siteId + '/deploy/stream');
+											es.onmessage = function(e) {
+												if (e.data === '[DONE]') {
+													es.close();
+													done = true;
+													setTimeout(function() { window.location.reload(); }, 1500);
+												} else {
+													lines.push(e.data);
+												}
+											};
+											es.onerror = function() { es.close(); done = true; };"
+										class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors text-sm"
+									>
+										Deploy Site
+									</button>
+								}
+								if site.Status == "stopped" {
+									<button
+										hx-post={ fmt.Sprintf("/sites/%d/start", site.ID) }
+										hx-target="body"
+										hx-swap="outerHTML"
+										class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors text-sm"
+									>
+										Start
+									</button>
+								}
+								if site.Status == "running" {
+									<button
+										hx-post={ fmt.Sprintf("/sites/%d/stop", site.ID) }
+										hx-target="body"
+										hx-swap="outerHTML"
+										class="w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors text-sm"
+									>
+										Stop
+									</button>
+									<button
+										hx-post={ fmt.Sprintf("/sites/%d/restart", site.ID) }
+										hx-target="body"
+										hx-swap="outerHTML"
+										class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm"
+									>
+										Restart
+									</button>
+								}
+								<button
+									hx-delete={ fmt.Sprintf("/sites/%d", site.ID) }
+									hx-confirm="Are you sure you want to delete this site? This will also remove containers on the remote server."
+									class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors text-sm"
+								>
+									Delete Site
+								</button>
+
+								<!-- Deploy progress panel -->
+								<div x-show="deploying && !done" x-cloak class="flex items-center gap-2 text-sm text-yellow-600 pt-2">
+									<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+										<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+										<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+									</svg>
+									Deploying...
+								</div>
+								<div x-show="lines.length > 0" x-cloak class="mt-2 bg-gray-900 rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-xs">
+									<template x-for="(line, i) in lines" :key="i">
+										<div class="text-gray-300 py-0.5" x-text="line" :class="{ 'text-red-400': line.startsWith('ERROR'), 'text-green-400': line.includes('successfully') }"></div>
+									</template>
+								</div>
+								<div x-show="done" x-cloak class="mt-2 text-sm text-green-600 font-medium">
+									Deployment finished. Reloading...
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+
+				<!-- Bottom row: Logs (left 2/3) + Health Checks (right 1/3) -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+					<div class="lg:col-span-2">
+						@components.Card("Logs") {
+							<div class="flex justify-end mb-3">
+								<button
+									hx-get={ fmt.Sprintf("/sites/%d/logs", site.ID) }
+									hx-target="#log-output"
+									hx-swap="innerHTML"
+									class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+								>
+									Refresh Logs
+								</button>
+							</div>
+							<div
+								id="log-output"
+								hx-get={ fmt.Sprintf("/sites/%d/logs", site.ID) }
+								hx-trigger="load"
+								hx-swap="innerHTML"
+								class="bg-gray-900 rounded-lg p-4 min-h-[200px] max-h-96 overflow-y-auto font-mono text-sm"
+							>
+								<p class="text-gray-500">Loading logs...</p>
+							</div>
+						}
+					</div>
+
+					<div class="lg:col-span-1">
+						@components.Card("Health Checks") {
+							<div class="flex justify-end mb-3">
+								<button
+									hx-get={ fmt.Sprintf("/sites/%d/health", site.ID) }
+									hx-target="#health-output"
+									hx-swap="innerHTML"
+									class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+								>
+									Refresh
+								</button>
+							</div>
+							<div
+								id="health-output"
+								hx-get={ fmt.Sprintf("/sites/%d/health", site.ID) }
+								hx-trigger="load"
+								hx-swap="innerHTML"
+							>
+								<p class="text-gray-500 text-sm">Loading health checks...</p>
+							</div>
+						}
+					</div>
+				</div>
+
+				<!-- Edit Site Modal -->
+				@components.Modal("edit-site", "Edit Site") {
+					<form
+						hx-put={ fmt.Sprintf("/sites/%d", site.ID) }
+						hx-target="body"
+						hx-swap="outerHTML"
+						@htmx:after-request="if(event.detail.successful) window.location.reload()"
+						class="space-y-5"
+						x-data={ fmt.Sprintf("{ isLocal: %v }", site.IsLocal) }
+					>
+						<div>
+							<label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Domain</label>
+							<input type="text" name="domain" value={ site.Domain }
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"/>
+						</div>
+						<div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+							<input type="checkbox" name="is_local" value="1" x-model="isLocal"
+								if site.IsLocal {
+									checked
+								}
+								class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"/>
+							<label class="text-sm font-medium text-gray-700">Local site</label>
+						</div>
+						<div x-show="isLocal">
+							<label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Compose Path</label>
+							<input type="text" name="compose_path" value={ site.ComposePath }
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"/>
+						</div>
+						<div x-show="!isLocal">
+							<label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Template</label>
+							<select name="template_slug"
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none">
+								<option value="">None</option>
+								for _, t := range templates {
+									<option value={ t.Slug }
+										if t.Slug == site.TemplateSlug {
+											selected
+										}
+									>{ t.Label }</option>
+								}
+							</select>
+						</div>
+						<div x-show="!isLocal">
+							<label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Server</label>
+							<select name="server_id"
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none">
+								<option value="">No server</option>
+								for _, srv := range servers {
+									<option value={ strconv.Itoa(srv.ID) }
+										if site.ServerID.Valid && int(site.ServerID.Int64) == srv.ID {
+											selected
+										}
+									>{ srv.Name } ({ srv.Host })</option>
+								}
+							</select>
+						</div>
+						<div>
+							<label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Customer</label>
+							<select name="customer_id"
+								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none">
+								<option value="">No customer</option>
+								for _, cust := range customers {
+									<option value={ strconv.Itoa(cust.ID) }
+										if site.CustomerID.Valid && int(site.CustomerID.Int64) == cust.ID {
+											selected
+										}
+									>{ cust.Name }</option>
+								}
+							</select>
+						</div>
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Container Name</label>
+								<input type="text" name="container_name" value={ site.ContainerName }
+									class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"/>
+							</div>
+							<div>
+								<label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Port</label>
+								<input type="number" name="port" value={ strconv.Itoa(site.Port) }
+									class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"/>
+							</div>
+						</div>
+						<div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
+							<button type="button" @click="$dispatch('close-modal')"
+								class="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">
+								Cancel
+							</button>
+							<button type="submit"
+								class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150">
+								Save Changes
+							</button>
+						</div>
+					</form>
+				}
+			</main>
+		</div>
+	}
+}
