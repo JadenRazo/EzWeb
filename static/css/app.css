@@ -204,7 +204,7 @@ dialog.modal-dialog::backdrop {
 
 /* ── Keyboard shortcuts overlay ──────────────────────────────────── */
 #shortcuts-overlay {
-    display: none;
+    display: flex;
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
@@ -212,8 +212,8 @@ dialog.modal-dialog::backdrop {
     align-items: center;
     justify-content: center;
 }
-#shortcuts-overlay.is-visible {
-    display: flex;
+#shortcuts-overlay.is-hidden {
+    display: none;
 }
 
 #shortcuts-overlay .shortcuts-panel {

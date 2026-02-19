@@ -27,8 +27,7 @@ var EzModal = (function() {
             var oid = overlayClose.getAttribute('data-close-overlay');
             var oel = document.getElementById(oid);
             if (oel) {
-                oel.classList.remove('is-visible');
-                if (oid === 'shortcuts-overlay') localStorage.removeItem('shortcuts-visible');
+                oel.classList.add('is-hidden');
             }
         }
     });
@@ -124,34 +123,57 @@ document.addEventListener('htmx:sendError', function() {
 
 // ── Keyboard shortcuts ──────────────────────────────────────────────
 (function() {
+    // Cleanup legacy keys
+    localStorage.removeItem('shortcuts-dismissed');
+    localStorage.removeItem('shortcuts-visible');
+
     var pendingKey = null;
+
+    function isSnoozed() {
+        var until = localStorage.getItem('shortcuts-snoozed-until');
+        if (!until) return false;
+        if (Date.now() < parseInt(until, 10)) return true;
+        localStorage.removeItem('shortcuts-snoozed-until');
+        return false;
+    }
 
     function showOverlay() {
         var overlay = document.getElementById('shortcuts-overlay');
-        if (overlay) {
-            overlay.classList.add('is-visible');
-            localStorage.setItem('shortcuts-visible', '1');
-        }
+        if (overlay) overlay.classList.remove('is-hidden');
     }
 
     function hideOverlay() {
         var overlay = document.getElementById('shortcuts-overlay');
-        if (overlay) {
-            overlay.classList.remove('is-visible');
-            localStorage.removeItem('shortcuts-visible');
+        if (overlay) overlay.classList.add('is-hidden');
+    }
+
+    function snoozeOverlay() {
+        localStorage.setItem('shortcuts-snoozed-until', String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+        hideOverlay();
+    }
+
+    // Show or hide based on snooze state — runs on load and after HTMX swaps
+    function applyOverlayState() {
+        if (isSnoozed()) {
+            hideOverlay();
+        } else {
+            showOverlay();
         }
     }
 
-    // Restore overlay state on load and after HTMX swaps
-    function restoreOverlay() {
-        if (localStorage.getItem('shortcuts-visible') === '1') {
-            var overlay = document.getElementById('shortcuts-overlay');
-            if (overlay) overlay.classList.add('is-visible');
-        }
-    }
+    applyOverlayState();
+    document.addEventListener('htmx:afterSettle', applyOverlayState);
 
-    restoreOverlay();
-    document.addEventListener('htmx:afterSettle', restoreOverlay);
+    // Backdrop click — close only when clicking the overlay itself, not the panel
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'shortcuts-overlay') {
+            hideOverlay();
+        }
+        // "Don't show for a week" button
+        if (e.target.closest('[data-snooze-shortcuts]')) {
+            snoozeOverlay();
+        }
+    });
 
     document.addEventListener('keydown', function(e) {
         // Don't trigger when typing in inputs
@@ -171,7 +193,7 @@ document.addEventListener('htmx:sendError', function() {
         // ? — toggle shortcuts help
         if (e.key === '?') {
             var overlay = document.getElementById('shortcuts-overlay');
-            if (overlay && overlay.classList.contains('is-visible')) {
+            if (overlay && !overlay.classList.contains('is-hidden')) {
                 hideOverlay();
             } else {
                 showOverlay();
@@ -182,7 +204,7 @@ document.addEventListener('htmx:sendError', function() {
         // Escape — close modals/overlays
         if (e.key === 'Escape') {
             var overlay = document.getElementById('shortcuts-overlay');
-            if (overlay && overlay.classList.contains('is-visible')) {
+            if (overlay && !overlay.classList.contains('is-hidden')) {
                 hideOverlay();
                 return;
             }
