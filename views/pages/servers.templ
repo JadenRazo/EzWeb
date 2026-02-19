@@ -13,14 +13,14 @@ templ Servers(localInfo docker.LocalServerInfo, servers []models.Server) {
 	@layouts.Base("Servers") {
 		<div class="flex min-h-screen">
 			@components.Navbar("/servers")
-			<main class="flex-1 p-6 lg:p-10">
-				<div class="flex items-center justify-between mb-8">
+			<main class="flex-1 p-6 lg:p-10 pt-16 lg:pt-10">
+				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
 					<div>
 						<h2 class="text-2xl font-bold text-gray-900">Servers</h2>
 						<p class="text-sm text-gray-500 mt-1">Manage your hosting infrastructure and SSH connections</p>
 					</div>
 					<button
-						@click="$dispatch('open-modal', { id: 'add-server' })"
+						data-modal-open="add-server"
 						class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-150"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
@@ -56,9 +56,26 @@ templ Servers(localInfo docker.LocalServerInfo, servers []models.Server) {
 						hx-post="/servers"
 						hx-target="#server-list"
 						hx-swap="beforeend"
-						@htmx:after-request="if(event.detail.successful) $dispatch('close-modal')"
+						hx-on:htmx:after-request="if(event.detail.successful) EzModal.close()"
 						class="space-y-5"
 					>
+						<details>
+							<summary class="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer">
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path>
+								</svg>
+								<span class="label-closed">What do I enter?</span>
+								<span class="label-open">Hide field guide</span>
+							</summary>
+							<div class="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-gray-700 space-y-2">
+								<p><span class="font-semibold text-gray-900">Server Name</span> — A friendly label to identify this server (e.g., "Production VPS", "Staging Server").</p>
+								<p><span class="font-semibold text-gray-900">Host / IP</span> — The server's IP address or hostname that EzWeb will SSH into (e.g., "192.168.1.50", "vps.example.com").</p>
+								<p><span class="font-semibold text-gray-900">SSH Port</span> — Defaults to 22. Only change this if your server uses a non-standard SSH port.</p>
+								<p><span class="font-semibold text-gray-900">SSH User</span> — Defaults to "root". Use whichever user has Docker permissions on the remote machine.</p>
+								<p><span class="font-semibold text-gray-900">SSH Key Path</span> — Absolute file path to the private key on this machine (e.g., "/root/.ssh/id_ed25519"). The key file must already exist.</p>
+								<p class="text-gray-500 italic">After adding, click "Test Connection" to verify SSH access.</p>
+							</div>
+					</details>
 						<div>
 							<label for="name" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Server Name</label>
 							<input type="text" id="name" name="name" required
@@ -71,7 +88,7 @@ templ Servers(localInfo docker.LocalServerInfo, servers []models.Server) {
 								class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
 								placeholder="192.168.1.100 or server.example.com"/>
 						</div>
-						<div class="grid grid-cols-2 gap-4">
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 							<div>
 								<label for="ssh_port" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">SSH Port</label>
 								<input type="number" id="ssh_port" name="ssh_port" value="22"
@@ -90,7 +107,7 @@ templ Servers(localInfo docker.LocalServerInfo, servers []models.Server) {
 								placeholder="/root/.ssh/id_rsa"/>
 						</div>
 						<div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
-							<button type="button" @click="$dispatch('close-modal')"
+							<button type="submit" formmethod="dialog" formnovalidate
 								class="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">
 								Cancel
 							</button>

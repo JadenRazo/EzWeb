@@ -8,12 +8,34 @@ import (
 	"strconv"
 )
 
+templ siteHelpGuide() {
+	<details>
+		<summary class="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer">
+			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path>
+			</svg>
+			<span class="label-closed">What do I enter?</span>
+			<span class="label-open">Hide field guide</span>
+		</summary>
+		<div class="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-gray-700 space-y-2">
+			<p><span class="font-semibold text-gray-900">Domain</span> — The fully qualified domain name for this site (e.g., "shop.example.com"). Just the hostname, no protocol or path. Must be unique.</p>
+			<p><span class="font-semibold text-gray-900">Local Site</span> — Check this if the site is already running as a Docker Compose project on this machine. Uncheck for deploying to a remote server.</p>
+			<p><span class="font-semibold text-gray-900">Compose Path</span> — (Local only) Absolute path to the existing Docker Compose project directory (e.g., "/opt/myapp").</p>
+			<p><span class="font-semibold text-gray-900">Template</span> — (Remote only) The type of site to deploy. Each template sets up the correct Docker stack (e.g., WordPress = WordPress + MySQL).</p>
+			<p><span class="font-semibold text-gray-900">Server</span> — (Remote only) Which remote server to deploy on. You can leave this empty and assign one later.</p>
+			<p><span class="font-semibold text-gray-900">Customer</span> — Optionally link this site to a customer for billing and organization. Can be assigned later.</p>
+			<p><span class="font-semibold text-gray-900">Container Name</span> — Auto-generated from the domain (dots become hyphens). Override only if you need a specific name.</p>
+			<p><span class="font-semibold text-gray-900">Port</span> — Auto-assigned starting at 8080. Override only if you need a specific port (1024–65535).</p>
+		</div>
+	</details>
+}
+
 templ Sites(sites []models.Site, servers []models.Server, templates []models.SiteTemplate, customers []models.Customer) {
 	@layouts.Base("Sites") {
 		<div class="flex min-h-screen">
 			@components.Navbar("/sites")
-			<main class="flex-1 p-6 lg:p-10" x-data="siteFilter()">
-				<div class="flex items-center justify-between mb-8">
+			<main class="flex-1 p-6 lg:p-10 pt-16 lg:pt-10" x-data="siteFilter()">
+				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
 					<div>
 						<h2 class="text-2xl font-bold text-gray-900">Sites</h2>
 						<p class="text-sm text-gray-500 mt-1">
@@ -24,7 +46,7 @@ templ Sites(sites []models.Site, servers []models.Server, templates []models.Sit
 						</p>
 					</div>
 					<button
-						@click="$dispatch('open-modal', { id: 'add-site' })"
+						data-modal-open="add-site"
 						class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-150"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
@@ -36,7 +58,7 @@ templ Sites(sites []models.Site, servers []models.Server, templates []models.Sit
 
 				<!-- Search & Filter Bar -->
 				<div class="mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
-					<div class="flex-1 min-w-[200px]">
+					<div class="w-full sm:flex-1 sm:min-w-[200px]">
 						<input
 							type="text"
 							placeholder="Search by domain..."
@@ -150,10 +172,11 @@ templ Sites(sites []models.Site, servers []models.Server, templates []models.Sit
 						hx-post="/sites"
 						hx-target="#site-list"
 						hx-swap="beforeend"
-						@htmx:after-request="if(event.detail.successful) $dispatch('close-modal')"
+						hx-on:htmx:after-request="if(event.detail.successful) EzModal.close()"
 						class="space-y-5"
 						x-data="{ isLocal: false }"
 					>
+						@siteHelpGuide()
 						<div>
 							<label for="domain" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Domain</label>
 							<input type="text" id="domain" name="domain" required
@@ -201,7 +224,7 @@ templ Sites(sites []models.Site, servers []models.Server, templates []models.Sit
 								}
 							</select>
 						</div>
-						<div class="grid grid-cols-2 gap-4">
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 							<div>
 								<label for="container_name" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Container Name</label>
 								<input type="text" id="container_name" name="container_name"
@@ -216,7 +239,7 @@ templ Sites(sites []models.Site, servers []models.Server, templates []models.Sit
 							</div>
 						</div>
 						<div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
-							<button type="button" @click="$dispatch('close-modal')"
+							<button type="submit" formmethod="dialog" formnovalidate
 								class="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">
 								Cancel
 							</button>
@@ -243,6 +266,7 @@ templ SiteForm(servers []models.Server, templates []models.SiteTemplate, custome
 				</div>
 				@components.Card("Site Configuration") {
 					<form action="/sites" method="POST" class="space-y-5" x-data="{ isLocal: false }">
+						@siteHelpGuide()
 						<div>
 							<label for="domain" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Domain</label>
 							<input type="text" id="domain" name="domain" required
@@ -290,7 +314,7 @@ templ SiteForm(servers []models.Server, templates []models.SiteTemplate, custome
 								}
 							</select>
 						</div>
-						<div class="grid grid-cols-2 gap-4">
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 							<div>
 								<label for="container_name" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Container Name</label>
 								<input type="text" id="container_name" name="container_name"

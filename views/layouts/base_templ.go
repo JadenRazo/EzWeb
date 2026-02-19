@@ -42,7 +42,7 @@ func Base(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " | EzWeb</title><link rel=\"icon\" href=\"data:,\"><link rel=\"stylesheet\" href=\"/static/css/tailwind.css\"><link rel=\"stylesheet\" href=\"/static/css/app.css\"><script defer src=\"/static/js/alpine.min.js\"></script><script src=\"/static/js/htmx.min.js\"></script></head><body class=\"bg-gray-50 min-h-screen antialiased\" hx-boost=\"true\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " | EzWeb</title><link rel=\"icon\" href=\"data:,\"><link rel=\"stylesheet\" href=\"/static/css/tailwind.css?v=9\"><link rel=\"stylesheet\" href=\"/static/css/app.css?v=9\"><script defer src=\"/static/js/alpine.min.js\"></script><script src=\"/static/js/htmx.min.js\"></script></head><body class=\"bg-gray-50 min-h-screen antialiased\" hx-boost=\"true\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -50,7 +50,7 @@ func Base(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<script>\n\t\tdocument.body.addEventListener('htmx:configRequest', function(evt) {\n\t\t\tvar c = document.cookie.split('; ').find(function(c) { return c.startsWith('csrf_token='); });\n\t\t\tif (c) evt.detail.headers['X-CSRF-Token'] = c.split('=')[1];\n\t\t});\n\t\t</script><script src=\"/static/js/app.js\"></script></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<!-- Keyboard shortcuts overlay --><div id=\"shortcuts-overlay\"><div class=\"shortcuts-panel\"><div class=\"flex justify-between items-center mb-4\"><h3 class=\"text-lg font-semibold\">Keyboard Shortcuts</h3><button data-close-overlay=\"shortcuts-overlay\" class=\"text-gray-400 hover:text-gray-600\">&times;</button></div><div class=\"space-y-3 text-sm\"><div class=\"flex justify-between\"><span>Show shortcuts</span><kbd>?</kbd></div><div class=\"flex justify-between\"><span>Dashboard</span><span><kbd>g</kbd> then <kbd>d</kbd></span></div><div class=\"flex justify-between\"><span>Sites</span><span><kbd>g</kbd> then <kbd>s</kbd></span></div><div class=\"flex justify-between\"><span>Customers</span><span><kbd>g</kbd> then <kbd>c</kbd></span></div><div class=\"flex justify-between\"><span>Payments</span><span><kbd>g</kbd> then <kbd>p</kbd></span></div><div class=\"flex justify-between\"><span>Servers</span><span><kbd>g</kbd> then <kbd>v</kbd></span></div><div class=\"flex justify-between\"><span>Backups</span><span><kbd>g</kbd> then <kbd>b</kbd></span></div><div class=\"flex justify-between\"><span>Close modal</span><kbd>Esc</kbd></div></div></div></div><script>\n\t\tdocument.body.addEventListener('htmx:configRequest', function(evt) {\n\t\t\tvar c = document.cookie.split('; ').find(function(c) { return c.startsWith('csrf_token='); });\n\t\t\tif (c) evt.detail.headers['X-CSRF-Token'] = c.split('=')[1];\n\t\t});\n\t\t</script><script src=\"/static/js/app.js?v=9\"></script></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -156,7 +156,7 @@ func Dashboard(data DashboardData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><!-- Site Status Summary --><div class=\"flex items-center gap-4 mb-8 px-1\"><span class=\"text-xs font-semibold text-gray-500 uppercase tracking-wider\">Site Health:</span> <a href=\"/sites\" class=\"inline-flex items-center gap-1.5 text-sm\"><span class=\"w-2 h-2 rounded-full bg-green-500\"></span> <span class=\"font-medium text-gray-700\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><!-- Site Status Summary --><div class=\"flex flex-wrap items-center gap-x-4 gap-y-2 mb-8 px-1\"><span class=\"text-xs font-semibold text-gray-500 uppercase tracking-wider\">Site Health:</span> <a href=\"/sites\" class=\"inline-flex items-center gap-1.5 text-sm\"><span class=\"w-2 h-2 rounded-full bg-green-500\"></span> <span class=\"font-medium text-gray-700\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -29,8 +29,8 @@ templ SiteDetailPage(site models.Site, servers []models.Server, templates []mode
 	@layouts.Base(site.Domain + " - Site Detail") {
 		<div class="flex min-h-screen">
 			@components.Navbar("/sites")
-			<main class="flex-1 p-6 lg:p-10">
-				<div class="flex items-center justify-between mb-8">
+			<main class="flex-1 p-6 lg:p-10 pt-16 lg:pt-10">
+				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
 					<div>
 						<div class="flex items-center gap-3">
 							<h2 class="text-2xl font-bold text-gray-900">{ site.Domain }</h2>
@@ -43,7 +43,7 @@ templ SiteDetailPage(site models.Site, servers []models.Server, templates []mode
 					</div>
 					<div class="flex items-center gap-3">
 						<button
-							@click="$dispatch('open-modal', { id: 'edit-site' })"
+							data-modal-open="edit-site"
 							class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150"
 						>
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -155,8 +155,8 @@ templ SiteDetailPage(site models.Site, servers []models.Server, templates []mode
 								if site.Status == "stopped" {
 									<button
 										hx-post={ fmt.Sprintf("/sites/%d/start", site.ID) }
-										hx-target="body"
-										hx-swap="outerHTML"
+										hx-swap="none"
+										@htmx:after-request="if(event.detail.successful) window.location.reload()"
 										class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors text-sm"
 									>
 										Start
@@ -165,21 +165,28 @@ templ SiteDetailPage(site models.Site, servers []models.Server, templates []mode
 								if site.Status == "running" {
 									<button
 										hx-post={ fmt.Sprintf("/sites/%d/stop", site.ID) }
-										hx-target="body"
-										hx-swap="outerHTML"
+										hx-swap="none"
+										@htmx:after-request="if(event.detail.successful) window.location.reload()"
 										class="w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors text-sm"
 									>
 										Stop
 									</button>
 									<button
 										hx-post={ fmt.Sprintf("/sites/%d/restart", site.ID) }
-										hx-target="body"
-										hx-swap="outerHTML"
+										hx-swap="none"
+										@htmx:after-request="if(event.detail.successful) window.location.reload()"
 										class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm"
 									>
 										Restart
 									</button>
 								}
+								<button
+									hx-post={ fmt.Sprintf("/sites/%d/backup", site.ID) }
+									hx-swap="none"
+									class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors text-sm"
+								>
+									Backup Site
+								</button>
 								<button
 									hx-delete={ fmt.Sprintf("/sites/%d", site.ID) }
 									hx-confirm="Are you sure you want to delete this site? This will also remove containers on the remote server."
@@ -263,8 +270,7 @@ templ SiteDetailPage(site models.Site, servers []models.Server, templates []mode
 				@components.Modal("edit-site", "Edit Site") {
 					<form
 						hx-put={ fmt.Sprintf("/sites/%d", site.ID) }
-						hx-target="body"
-						hx-swap="outerHTML"
+						hx-swap="none"
 						@htmx:after-request="if(event.detail.successful) window.location.reload()"
 						class="space-y-5"
 						x-data={ fmt.Sprintf("{ isLocal: %v }", site.IsLocal) }
@@ -329,7 +335,7 @@ templ SiteDetailPage(site models.Site, servers []models.Server, templates []mode
 								}
 							</select>
 						</div>
-						<div class="grid grid-cols-2 gap-4">
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 							<div>
 								<label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Container Name</label>
 								<input type="text" name="container_name" value={ site.ContainerName }
@@ -342,7 +348,7 @@ templ SiteDetailPage(site models.Site, servers []models.Server, templates []mode
 							</div>
 						</div>
 						<div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
-							<button type="button" @click="$dispatch('close-modal')"
+							<button type="submit" formmethod="dialog" formnovalidate
 								class="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">
 								Cancel
 							</button>

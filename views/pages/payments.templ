@@ -13,13 +13,13 @@ templ Payments(payments []models.Payment, customers []models.Customer, sites []m
 		<div class="flex min-h-screen bg-gray-50">
 			@components.Navbar("/payments")
 			<main class="flex-1 p-8 lg:pl-8 pl-4 pt-16 lg:pt-8">
-				<div class="flex items-center justify-between mb-6">
+				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
 					<div>
 						<h2 class="text-2xl font-bold text-gray-900">Payments</h2>
 						<p class="text-sm text-gray-500 mt-1">Track invoices, due dates, and payment status</p>
 					</div>
 					<button
-						@click="$dispatch('open-modal', { id: 'add-payment' })"
+						data-modal-open="add-payment"
 						class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-150"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
@@ -67,7 +67,7 @@ templ Payments(payments []models.Payment, customers []models.Customer, sites []m
 						hx-post="/payments"
 						hx-target="#payment-list"
 						hx-swap="beforeend"
-						@htmx:after-request="if(event.detail.successful) $dispatch('close-modal')"
+						hx-on:htmx:after-request="if(event.detail.successful) EzModal.close()"
 						class="space-y-5"
 					>
 						<div>
@@ -106,7 +106,7 @@ templ Payments(payments []models.Payment, customers []models.Customer, sites []m
 								placeholder="Optional notes about this payment"></textarea>
 						</div>
 						<div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
-							<button type="button" @click="$dispatch('close-modal')" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+							<button type="submit" formmethod="dialog" formnovalidate class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
 								Cancel
 							</button>
 							<button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg shadow-sm transition-all duration-150">
