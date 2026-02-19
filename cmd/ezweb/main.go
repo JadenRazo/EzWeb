@@ -112,6 +112,9 @@ func main() {
 		app.Get("/metrics", metrics.Handler())
 	}
 
+	// Public status API (unauthenticated, for external dashboards)
+	app.Get("/api/status", handlers.PublicStatus(database))
+
 	// Rate limit on login
 	loginLimiter := limiter.New(limiter.Config{
 		Max:        10,
