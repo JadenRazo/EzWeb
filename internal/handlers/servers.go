@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"os"
 	"strconv"
 
 	"ezweb/internal/docker"
@@ -46,6 +47,10 @@ func CreateServerHandler(db *sql.DB) fiber.Handler {
 
 		if s.Name == "" || s.Host == "" || s.SSHKeyPath == "" {
 			return c.Status(fiber.StatusBadRequest).SendString("Name, host, and SSH key path are required")
+		}
+
+		if _, err := os.Stat(s.SSHKeyPath); err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("SSH key file not found")
 		}
 
 		if err := models.CreateServer(db, s); err != nil {

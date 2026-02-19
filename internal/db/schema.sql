@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'admin',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS sites (
     is_local INTEGER DEFAULT 0,
     compose_path TEXT,
     routing_config TEXT,
+    ssl_expiry DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -93,6 +95,8 @@ CREATE INDEX IF NOT EXISTS idx_payments_customer_id ON payments(customer_id);
 CREATE INDEX IF NOT EXISTS idx_payments_due_date ON payments(due_date);
 CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_activity_log_entity_time ON activity_log(entity_type, entity_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sites_domain ON sites(domain);
 
 -- Seed templates
 INSERT OR IGNORE INTO site_templates (slug, label, description) VALUES

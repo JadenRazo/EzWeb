@@ -12,15 +12,16 @@ type User struct {
 	ID        int
 	Username  string
 	Password  string
+	Role      string
 	CreatedAt time.Time
 }
 
 func GetUserByUsername(db *sql.DB, username string) (*User, error) {
 	user := &User{}
 	err := db.QueryRow(
-		"SELECT id, username, password, created_at FROM users WHERE username = ?",
+		"SELECT id, username, password, COALESCE(role, 'admin'), created_at FROM users WHERE username = ?",
 		username,
-	).Scan(&user.ID, &user.Username, &user.Password, &user.CreatedAt)
+	).Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
@@ -36,6 +37,42 @@ func CreateUser(db *sql.DB, username, hashedPassword string) error {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 	return nil
+}
+
+func GetAllUsers(db *sql.DB) ([]User, error) {
+	rows, err := db.Query("SELECT id, username, COALESCE(role, 'admin'), created_at FROM users ORDER BY created_at")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
+func CreateUserWithRole(db *sql.DB, username, hashedPassword, role string) error {
+	_, err := db.Exec(
+		"INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+		username, hashedPassword, role,
+	)
+	return err
+}
+
+func UpdateUserRole(db *sql.DB, id int, role string) error {
+	_, err := db.Exec("UPDATE users SET role = ? WHERE id = ?", role, id)
+	return err
+}
+
+func DeleteUser(db *sql.DB, id int) error {
+	_, err := db.Exec("DELETE FROM users WHERE id = ?", id)
+	return err
 }
 
 // EnsureAdminExists creates the admin user if it doesn't exist, or updates

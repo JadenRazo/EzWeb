@@ -40,7 +40,7 @@ templ alertIcon(alertType string) {
 
 templ Alert(message string, alertType string) {
 	if message != "" {
-		<div data-auto-dismiss class={ "rounded-xl p-4 mb-4 flex items-start gap-3", alertClasses(alertType) }>
+		<div role="alert" data-auto-dismiss class={ "rounded-xl p-4 mb-4 flex items-start gap-3", alertClasses(alertType) }>
 			@alertIcon(alertType)
 			<p class="text-sm leading-relaxed">{ message }</p>
 		</div>

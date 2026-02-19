@@ -16,18 +16,22 @@ type Activity struct {
 }
 
 func LogActivity(db *sql.DB, entityType string, entityID int, action string, details string) {
-	_, _ = db.Exec(
+	if _, err := db.Exec(
 		"INSERT INTO activity_log (entity_type, entity_id, action, details) VALUES (?, ?, ?, ?)",
 		entityType, entityID, action, details,
-	)
+	); err != nil {
+		log.Printf("failed to log activity (%s/%d %s): %v", entityType, entityID, action, err)
+	}
 }
 
 // LogActivityAt inserts an activity with a specific timestamp (for backfilling).
 func LogActivityAt(db *sql.DB, entityType string, entityID int, action string, details string, createdAt string) {
-	_, _ = db.Exec(
+	if _, err := db.Exec(
 		"INSERT INTO activity_log (entity_type, entity_id, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
 		entityType, entityID, action, details, createdAt,
-	)
+	); err != nil {
+		log.Printf("failed to log activity at %s (%s/%d %s): %v", createdAt, entityType, entityID, action, err)
+	}
 }
 
 func GetRecentActivities(db *sql.DB, limit int) ([]Activity, error) {

@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"ezweb/internal/auth"
+	"ezweb/internal/backup"
 	"ezweb/internal/caddy"
 	"ezweb/internal/config"
 	"ezweb/internal/db"
 	"ezweb/internal/handlers"
 	"ezweb/internal/health"
+	"ezweb/internal/metrics"
 	"ezweb/internal/models"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,7 +31,7 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	database, err := db.Open(cfg.DBPath)
+	database, err := db.Open(cfg.DBPath, cfg.DBMaxOpenConns, cfg.DBMaxIdleConns)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
@@ -44,13 +46,20 @@ func main() {
 	// Seed activity log for pre-existing entities (no-op if already populated)
 	models.BackfillActivities(database)
 
+	// Account lockout tracker
+	lockout := auth.NewLockoutTracker(cfg.LockoutMaxAttempts, time.Duration(cfg.LockoutDurationMin)*time.Minute)
+
+	// Backup manager
+	backupMgr := backup.NewManager(cfg.BackupDir, database)
+
 	// Caddy manager
 	caddyMgr := caddy.NewManager(cfg.CaddyfilePath, cfg.AcmeEmail)
 
 	// Start background health checker
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	checker := health.NewChecker(database, 5*time.Minute, cfg.WebhookURL, cfg.WebhookFormat, cfg.AlertThreshold)
+	emailSender := health.NewEmailSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPFrom, cfg.AlertEmail, cfg.SMTPUsername, cfg.SMTPPassword)
+	checker := health.NewChecker(database, time.Duration(cfg.HealthCheckInterval)*time.Minute, cfg.WebhookURL, cfg.WebhookFormat, cfg.AlertThreshold, cfg.HealthRetentionDays, cfg.ActivityRetentionDays, emailSender)
 	go checker.Start(ctx)
 
 	app := fiber.New(fiber.Config{
@@ -70,7 +79,8 @@ func main() {
 			if e, ok := err.(*fiber.Error); ok {
 				code = e.Code
 			}
-			return c.Status(code).SendString(err.Error())
+			log.Printf("HTTP %d: %v", code, err)
+			return c.Status(code).SendString("An error occurred")
 		},
 	})
 
@@ -78,13 +88,29 @@ func main() {
 	app.Use(recover.New())
 	app.Use(helmet.New())
 
+	// Metrics middleware (counts requests, tracks latency)
+	if cfg.MetricsEnabled {
+		app.Use(metrics.Middleware())
+	}
+
 	// Static files
 	app.Static("/static", "./static")
 
 	// Health probe — unauthenticated, before any auth middleware.
 	app.Get("/healthz", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"status": "ok"})
+		if err := database.Ping(); err != nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"status": "degraded",
+				"db":     "unreachable",
+			})
+		}
+		return c.JSON(fiber.Map{"status": "ok", "db": "connected"})
 	})
+
+	// Prometheus metrics endpoint (unauthenticated for scraping)
+	if cfg.MetricsEnabled {
+		app.Get("/metrics", metrics.Handler())
+	}
 
 	// Rate limit on login
 	loginLimiter := limiter.New(limiter.Config{
@@ -97,7 +123,7 @@ func main() {
 
 	// Public routes
 	app.Get("/login", handlers.LoginPage)
-	app.Post("/login", loginLimiter, handlers.LoginPost(database, cfg))
+	app.Post("/login", loginLimiter, handlers.LoginPost(database, cfg, lockout))
 	app.Get("/logout", handlers.Logout(cfg))
 
 	// Protected routes
@@ -113,11 +139,16 @@ func main() {
 	}))
 
 	// CSRF protection
+	//
+	// CookieHTTPOnly MUST remain false: the HTMX configRequest handler in
+	// base.templ reads the csrf_token cookie via document.cookie and copies
+	// it into the X-CSRF-Token request header (double-submit pattern).
 	protected.Use(csrf.New(csrf.Config{
 		KeyLookup:      "header:X-CSRF-Token",
 		CookieName:     "csrf_token",
 		CookieSameSite: "Lax",
 		CookieHTTPOnly: false,
+		CookieSecure:   cfg.SecureCookies,
 		Expiration:     1 * time.Hour,
 	}))
 
@@ -171,6 +202,28 @@ func main() {
 	protected.Put("/payments/:id", handlers.UpdatePayment(database))
 	protected.Post("/payments/:id/mark-paid", handlers.MarkPaid(database))
 	protected.Delete("/payments/:id", handlers.DeletePayment(database))
+
+	// CSV Exports
+	protected.Get("/export/sites", handlers.ExportSitesCSV(database))
+	protected.Get("/export/customers", handlers.ExportCustomersCSV(database))
+	protected.Get("/export/payments", handlers.ExportPaymentsCSV(database))
+
+	// Backups
+	protected.Get("/backups", handlers.BackupsPage(backupMgr))
+	protected.Post("/backups/database", handlers.CreateDatabaseBackup(backupMgr, cfg.DBPath))
+	protected.Post("/backups/full", handlers.CreateFullBackup(backupMgr, cfg.DBPath))
+	protected.Post("/sites/:id/backup", handlers.CreateSiteBackupHandler(backupMgr, func(id int) (*models.Site, error) {
+		return models.GetSiteByID(database, id)
+	}))
+	protected.Delete("/backups/:name", handlers.DeleteBackup(backupMgr))
+	protected.Get("/backups/:name/download", handlers.DownloadBackup(backupMgr))
+	protected.Post("/backups/:name/restore", handlers.RestoreBackup(backupMgr, cfg.DBPath))
+
+	// User management (admin only)
+	adminOnly := protected.Group("/", auth.AdminOnly())
+	adminOnly.Get("/users", handlers.ListUsers(database))
+	adminOnly.Post("/users", handlers.CreateUser(database))
+	adminOnly.Delete("/users/:id", handlers.DeleteUserHandler(database))
 
 	// Templates API
 	protected.Get("/api/templates", handlers.ListTemplates(database))

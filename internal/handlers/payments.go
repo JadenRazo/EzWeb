@@ -54,11 +54,16 @@ func CreatePayment(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).SendString("Due date is required")
 		}
 
+		notes := c.FormValue("notes")
+		if !validateNotes(notes) {
+			return c.Status(fiber.StatusBadRequest).SendString("Notes must be 1000 characters or less")
+		}
+
 		p := &models.Payment{
 			CustomerID: customerID,
 			Amount:     amount,
 			DueDate:    dueDate,
-			Notes:      c.FormValue("notes"),
+			Notes:      notes,
 		}
 
 		// Handle optional site_id
@@ -142,12 +147,17 @@ func UpdatePayment(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).SendString("Due date is required")
 		}
 
+		notes := c.FormValue("notes")
+		if !validateNotes(notes) {
+			return c.Status(fiber.StatusBadRequest).SendString("Notes must be 1000 characters or less")
+		}
+
 		p := &models.Payment{
 			ID:         id,
 			CustomerID: customerID,
 			Amount:     amount,
 			DueDate:    dueDate,
-			Notes:      c.FormValue("notes"),
+			Notes:      notes,
 		}
 
 		if siteIDStr := c.FormValue("site_id"); siteIDStr != "" {

@@ -20,6 +20,7 @@ type Site struct {
 	IsLocal       bool
 	ComposePath   string
 	RoutingConfig *RoutingConfig
+	SSLExpiry     sql.NullTime
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 
@@ -59,7 +60,7 @@ const siteSelectColumns = `
 	s.id, s.domain, s.server_id, COALESCE(s.template_slug,''), s.customer_id,
 	COALESCE(s.container_name,''), COALESCE(s.port,0), COALESCE(s.status,'pending'),
 	COALESCE(s.ssl_enabled,0), COALESCE(s.is_local,0), COALESCE(s.compose_path,''),
-	COALESCE(s.routing_config,''), s.created_at, s.updated_at,
+	COALESCE(s.routing_config,''), s.ssl_expiry, s.created_at, s.updated_at,
 	COALESCE(srv.name,''), COALESCE(c.name,'')`
 
 const siteFromJoins = `
@@ -75,7 +76,7 @@ func scanSite(scanner interface{ Scan(dest ...interface{}) error }) (*Site, erro
 		&s.ID, &s.Domain, &s.ServerID, &s.TemplateSlug, &s.CustomerID,
 		&s.ContainerName, &s.Port, &s.Status,
 		&sslInt, &localInt, &s.ComposePath,
-		&routingRaw, &s.CreatedAt, &s.UpdatedAt,
+		&routingRaw, &s.SSLExpiry, &s.CreatedAt, &s.UpdatedAt,
 		&s.ServerName, &s.CustomerName,
 	); err != nil {
 		return nil, err
@@ -251,4 +252,17 @@ func GetSiteByComposePath(db *sql.DB, composePath string) (*Site, error) {
 		return nil, fmt.Errorf("site not found by compose_path: %w", err)
 	}
 	return s, nil
+}
+
+// UpdateSiteSSLExpiry stores the latest observed certificate expiry time for
+// a site. It is called by the health checker after a successful TLS handshake.
+func UpdateSiteSSLExpiry(db *sql.DB, siteID int, expiry time.Time) error {
+	_, err := db.Exec(
+		"UPDATE sites SET ssl_expiry = ? WHERE id = ?",
+		expiry, siteID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update ssl_expiry for site %d: %w", siteID, err)
+	}
+	return nil
 }

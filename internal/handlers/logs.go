@@ -3,7 +3,10 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"ezweb/internal/docker"
@@ -26,14 +29,25 @@ func GetSiteLogs(db *sql.DB) fiber.Handler {
 			return c.Status(404).SendString("Site not found")
 		}
 
+		lines := c.QueryInt("lines", 200)
+		if lines < 50 {
+			lines = 50
+		}
+		if lines > 2000 {
+			lines = 2000
+		}
+
+		search := c.Query("search", "")
+
 		var output string
 
 		if site.IsLocal && site.ComposePath != "" {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
-			output, err = docker.LocalComposeLogs(ctx, site.ComposePath, 200)
+			output, err = docker.LocalComposeLogs(ctx, site.ComposePath, lines)
 			if err != nil {
-				return c.Status(500).SendString("Failed to get logs: " + err.Error())
+				log.Printf("failed to get local logs for site %d: %v", id, err)
+				return c.Status(500).SendString("Failed to get logs")
 			}
 		} else {
 			if !site.ServerID.Valid {
@@ -47,14 +61,31 @@ func GetSiteLogs(db *sql.DB) fiber.Handler {
 
 			client, err := sshutil.NewClientWithHostKey(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey)
 			if err != nil {
-				return c.Status(500).SendString("SSH connection failed: " + err.Error())
+				log.Printf("SSH connection failed for site %d: %v", id, err)
+				return c.Status(500).SendString("SSH connection failed")
 			}
 			defer client.Close()
 
-			output, err = sshutil.RunCommand(client, "cd /opt/ezweb/"+site.ContainerName+" && docker compose logs --tail 200 2>&1")
-			if err != nil {
-				return c.Status(500).SendString("Failed to get logs: " + err.Error())
+			if err := docker.ValidateContainerName(site.ContainerName); err != nil {
+				return c.Status(400).SendString("Invalid container name")
 			}
+
+			output, err = sshutil.RunCommand(client, fmt.Sprintf("cd /opt/ezweb/%s && docker compose logs --tail %d 2>&1", site.ContainerName, lines))
+			if err != nil {
+				log.Printf("failed to get remote logs for site %d: %v", id, err)
+				return c.Status(500).SendString("Failed to get logs")
+			}
+		}
+
+		// Apply search filter if provided
+		if search != "" {
+			var filtered []string
+			for _, line := range strings.Split(output, "\n") {
+				if strings.Contains(strings.ToLower(line), strings.ToLower(search)) {
+					filtered = append(filtered, line)
+				}
+			}
+			output = strings.Join(filtered, "\n")
 		}
 
 		c.Set("Content-Type", "text/html")

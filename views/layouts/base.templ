@@ -16,11 +16,11 @@ templ Base(title string) {
 	<body class="bg-gray-50 min-h-screen antialiased" hx-boost="true">
 		{ children... }
 		<!-- Keyboard shortcuts overlay -->
-		<div id="shortcuts-overlay">
-			<div class="shortcuts-panel">
+		<div id="shortcuts-overlay" data-close-overlay="shortcuts-overlay">
+			<div class="shortcuts-panel" onclick="event.stopPropagation()">
 				<div class="flex justify-between items-center mb-4">
 					<h3 class="text-lg font-semibold">Keyboard Shortcuts</h3>
-					<button data-close-overlay="shortcuts-overlay" class="text-gray-400 hover:text-gray-600">&times;</button>
+					<button data-close-overlay="shortcuts-overlay" class="text-gray-400 hover:text-gray-600 text-2xl leading-none px-1">&times;</button>
 				</div>
 				<div class="space-y-3 text-sm">
 					<div class="flex justify-between"><span>Show shortcuts</span><kbd>?</kbd></div>

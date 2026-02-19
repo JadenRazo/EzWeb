@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"strconv"
 
 	"ezweb/internal/models"
@@ -34,6 +35,12 @@ func CreateCustomer(db *sql.DB) fiber.Handler {
 
 		if customer.Name == "" {
 			return c.Status(fiber.StatusBadRequest).SendString("Name is required")
+		}
+		if !validateEmail(customer.Email) {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid email format")
+		}
+		if !validatePhone(customer.Phone) {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid phone format")
 		}
 
 		if err := models.CreateCustomer(db, customer); err != nil {
@@ -110,6 +117,12 @@ func UpdateCustomer(db *sql.DB) fiber.Handler {
 		if customer.Name == "" {
 			return c.Status(fiber.StatusBadRequest).SendString("Name is required")
 		}
+		if !validateEmail(customer.Email) {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid email format")
+		}
+		if !validatePhone(customer.Phone) {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid phone format")
+		}
 
 		if err := models.UpdateCustomer(db, customer); err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to update customer")
@@ -144,23 +157,35 @@ func DeleteCustomer(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusNotFound).SendString("Customer not found")
 		}
 
-		// Detach sites from this customer rather than leaving a dangling FK.
-		if _, err := db.Exec("UPDATE sites SET customer_id = NULL WHERE customer_id = ?", id); err != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString("Failed to detach customer sites")
+		tx, err := db.Begin()
+		if err != nil {
+			log.Printf("failed to begin transaction for customer delete %d: %v", id, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete customer")
+		}
+		defer tx.Rollback() //nolint:errcheck
+
+		if _, err := tx.Exec("UPDATE sites SET customer_id = NULL WHERE customer_id = ?", id); err != nil {
+			log.Printf("failed to detach sites from customer %d: %v", id, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete customer")
 		}
 
-		// Remove payments owned by this customer — they have no meaning without their owner.
-		if _, err := db.Exec("DELETE FROM payments WHERE customer_id = ?", id); err != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString("Failed to remove customer payments")
+		if _, err := tx.Exec("DELETE FROM payments WHERE customer_id = ?", id); err != nil {
+			log.Printf("failed to remove payments for customer %d: %v", id, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete customer")
 		}
 
-		if err := models.DeleteCustomer(db, id); err != nil {
+		if _, err := tx.Exec("DELETE FROM customers WHERE id = ?", id); err != nil {
+			log.Printf("failed to delete customer %d: %v", id, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete customer")
+		}
+
+		if err := tx.Commit(); err != nil {
+			log.Printf("failed to commit customer delete %d: %v", id, err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete customer")
 		}
 
 		models.LogActivity(db, "customer", id, "deleted", "Deleted customer "+customer.Name)
 
-		// HTMX: return empty string so the row is removed
 		if c.Get("HX-Request") != "" {
 			return c.SendString("")
 		}

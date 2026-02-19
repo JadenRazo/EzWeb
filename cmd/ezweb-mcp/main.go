@@ -19,7 +19,7 @@ func main() {
 		dbPath = "./ezweb.db"
 	}
 
-	database, err := db.Open(dbPath)
+	database, err := db.Open(dbPath, 25, 5)
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}

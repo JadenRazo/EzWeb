@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/joho/godotenv"
@@ -21,6 +22,22 @@ type Config struct {
 	WebhookURL     string
 	WebhookFormat  string
 	AlertThreshold int
+	BackupDir      string
+	MetricsEnabled        bool
+	HealthCheckInterval   int
+	JWTExpiryHours        int
+	DBMaxOpenConns        int
+	DBMaxIdleConns        int
+	ActivityRetentionDays int
+	HealthRetentionDays   int
+	LockoutMaxAttempts    int
+	LockoutDurationMin    int
+	SMTPHost     string
+	SMTPPort     int
+	SMTPFrom     string
+	SMTPUsername string
+	SMTPPassword string
+	AlertEmail   string
 }
 
 func Load() (*Config, error) {
@@ -38,6 +55,22 @@ func Load() (*Config, error) {
 		WebhookURL:     getEnv("WEBHOOK_URL", ""),
 		WebhookFormat:  getEnv("WEBHOOK_FORMAT", "discord"),
 		AlertThreshold: getEnvInt("ALERT_THRESHOLD", 3),
+		BackupDir:      getEnv("BACKUP_DIR", "./backups"),
+		MetricsEnabled:        getEnv("METRICS_ENABLED", "false") == "true",
+		HealthCheckInterval:   getEnvInt("HEALTH_CHECK_INTERVAL", 5),
+		JWTExpiryHours:        getEnvInt("JWT_EXPIRY_HOURS", 24),
+		DBMaxOpenConns:        getEnvInt("DB_MAX_OPEN_CONNS", 25),
+		DBMaxIdleConns:        getEnvInt("DB_MAX_IDLE_CONNS", 5),
+		ActivityRetentionDays: getEnvInt("ACTIVITY_RETENTION_DAYS", 90),
+		HealthRetentionDays:   getEnvInt("HEALTH_RETENTION_DAYS", 30),
+		LockoutMaxAttempts:    getEnvInt("LOCKOUT_MAX_ATTEMPTS", 5),
+		LockoutDurationMin:    getEnvInt("LOCKOUT_DURATION_MIN", 15),
+		SMTPHost:     getEnv("SMTP_HOST", ""),
+		SMTPPort:     getEnvInt("SMTP_PORT", 587),
+		SMTPFrom:     getEnv("SMTP_FROM", ""),
+		SMTPUsername: getEnv("SMTP_USERNAME", ""),
+		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
+		AlertEmail:   getEnv("ALERT_EMAIL", ""),
 	}
 
 	if cfg.JWTSecret == "" {
@@ -48,6 +81,21 @@ func Load() (*Config, error) {
 	}
 	if len(cfg.AdminPass) < 8 {
 		log.Println("WARNING: ADMIN_PASS is shorter than 8 characters — use a stronger password in production")
+	}
+
+	if len(cfg.JWTSecret) < 32 {
+		log.Println("WARNING: JWT_SECRET is shorter than 32 characters — use a longer secret in production")
+	}
+
+	if cfg.BackupDir != "" {
+		if err := os.MkdirAll(cfg.BackupDir, 0750); err != nil {
+			log.Printf("WARNING: could not create BACKUP_DIR %q: %v", cfg.BackupDir, err)
+		}
+	}
+
+	caddyParent := filepath.Dir(cfg.CaddyfilePath)
+	if _, err := os.Stat(caddyParent); os.IsNotExist(err) {
+		log.Printf("WARNING: CADDYFILE_PATH parent directory %q does not exist — Caddy config writes will fail", caddyParent)
 	}
 
 	return cfg, nil

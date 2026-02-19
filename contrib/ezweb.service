@@ -1,17 +1,39 @@
 [Unit]
 Description=EzWeb Site Manager
 After=network.target
+Documentation=https://github.com/yourusername/ezweb
 
 [Service]
 Type=simple
-User=root
+User=ezweb
+Group=ezweb
 WorkingDirectory=/opt/ezweb
 EnvironmentFile=/opt/ezweb/.env
 ExecStart=/opt/ezweb/ezweb
 Restart=always
 RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=30
 StandardOutput=journal
 StandardError=journal
+SyslogIdentifier=ezweb
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/ezweb /var/lib/ezweb
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+MemoryDenyWriteExecute=yes
+RestrictNamespaces=yes
+
+# Resource limits
+LimitNOFILE=65535
+LimitNPROC=4096
 
 [Install]
 WantedBy=multi-user.target

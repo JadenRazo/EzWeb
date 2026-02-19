@@ -25,15 +25,18 @@ type Checker struct {
 	Interval       time.Duration
 	Client         *http.Client
 	Webhook        *WebhookSender
-	AlertThreshold int
-	failures       map[int]int
+	Email          *EmailSender
+	AlertThreshold        int
+	HealthRetentionDays   int
+	ActivityRetentionDays int
+	failures              map[int]int
 	alertedSites   map[int]bool
 	mu             sync.Mutex
 	semaphore      chan struct{}
 	running        atomic.Int32
 }
 
-func NewChecker(db *sql.DB, interval time.Duration, webhookURL string, webhookFormat string, alertThreshold int) *Checker {
+func NewChecker(db *sql.DB, interval time.Duration, webhookURL string, webhookFormat string, alertThreshold int, healthRetentionDays int, activityRetentionDays int, email *EmailSender) *Checker {
 	var webhook *WebhookSender
 	if webhookURL != "" {
 		webhook = NewWebhookSender(webhookURL, webhookFormat)
@@ -46,10 +49,13 @@ func NewChecker(db *sql.DB, interval time.Duration, webhookURL string, webhookFo
 		Interval:       interval,
 		Client:         &http.Client{Timeout: 10 * time.Second},
 		Webhook:        webhook,
+		Email:          email,
 		AlertThreshold: alertThreshold,
-		failures:       make(map[int]int),
-		alertedSites:   make(map[int]bool),
-		semaphore:      make(chan struct{}, maxConcurrentChecks),
+		HealthRetentionDays:   healthRetentionDays,
+		ActivityRetentionDays: activityRetentionDays,
+		failures:              make(map[int]int),
+		alertedSites:          make(map[int]bool),
+		semaphore:             make(chan struct{}, maxConcurrentChecks),
 	}
 }
 
@@ -79,9 +85,9 @@ func (ch *Checker) checkAll() {
 	defer ch.running.Store(0)
 
 	// Prune health checks older than 30 days.
-	ch.DB.Exec("DELETE FROM health_checks WHERE checked_at < datetime('now', '-30 days')")
-	// Prune activity log entries older than 90 days.
-	ch.DB.Exec("DELETE FROM activity_log WHERE created_at < datetime('now', '-90 days')")
+	ch.DB.Exec(fmt.Sprintf("DELETE FROM health_checks WHERE checked_at < datetime('now', '-%d days')", ch.HealthRetentionDays))
+	// Prune activity log entries older than configured retention.
+	ch.DB.Exec(fmt.Sprintf("DELETE FROM activity_log WHERE created_at < datetime('now', '-%d days')", ch.ActivityRetentionDays))
 
 	sites, err := models.GetAllSites(ch.DB)
 	if err != nil {
@@ -129,6 +135,26 @@ func (ch *Checker) checkSite(site models.Site) {
 			hc.HTTPStatus = resp.StatusCode
 			hc.LatencyMs = int(latency)
 			resp.Body.Close()
+		}
+	}
+
+	// SSL certificate expiry check — only performed for SSL-enabled sites with
+	// a known domain. The result is stored on the site record and a webhook
+	// alert is sent when the cert expires within 14 days.
+	if site.SSLEnabled && site.Domain != "" {
+		if expiry, certErr := CheckCertExpiry(site.Domain); certErr == nil {
+			if updateErr := models.UpdateSiteSSLExpiry(ch.DB, site.ID, expiry); updateErr != nil {
+				log.Printf("Health checker: failed to store ssl_expiry for site %d: %v", site.ID, updateErr)
+			}
+			daysUntilExpiry := int(time.Until(expiry).Hours() / 24)
+			if daysUntilExpiry <= 14 && daysUntilExpiry > 0 && ch.Webhook != nil {
+				msg := fmt.Sprintf("SSL certificate expires in %d days", daysUntilExpiry)
+				if err := ch.Webhook.SendAlert(site.Domain, 0, msg); err != nil {
+					log.Printf("Webhook cert-expiry alert failed for %s: %v", site.Domain, err)
+				}
+			}
+		} else {
+			log.Printf("Health checker: cert check failed for %s: %v", site.Domain, certErr)
 		}
 	}
 
@@ -189,6 +215,19 @@ func (ch *Checker) checkSite(site models.Site) {
 	if shouldRecover && ch.Webhook != nil {
 		if err := ch.Webhook.SendRecovery(site.Domain); err != nil {
 			log.Printf("Webhook recovery failed for %s: %v", site.Domain, err)
+		}
+	}
+
+	if shouldAlert && ch.Email != nil {
+		errMsg := fmt.Sprintf("HTTP: %d, Container: %s", hc.HTTPStatus, hc.ContainerStatus)
+		if err := ch.Email.SendAlert(site.Domain, ch.failures[site.ID], errMsg); err != nil {
+			log.Printf("Email alert failed for %s: %v", site.Domain, err)
+		}
+	}
+
+	if shouldRecover && ch.Email != nil {
+		if err := ch.Email.SendRecovery(site.Domain); err != nil {
+			log.Printf("Email recovery failed for %s: %v", site.Domain, err)
 		}
 	}
 }

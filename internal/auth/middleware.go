@@ -20,6 +20,19 @@ func AuthMiddleware(secret string) fiber.Handler {
 
 		c.Locals("user_id", claims.UserID)
 		c.Locals("username", claims.Username)
+		c.Locals("role", claims.Role)
+		return c.Next()
+	}
+}
+
+// AdminOnly is a middleware that restricts access to admin-role users only.
+// It must be used after AuthMiddleware so that role is already set in locals.
+func AdminOnly() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		role, _ := c.Locals("role").(string)
+		if role != "admin" {
+			return c.Status(fiber.StatusForbidden).SendString("Admin access required")
+		}
 		return c.Next()
 	}
 }

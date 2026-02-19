@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,19 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
+
+var domainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$`)
+
+func validateDomain(domain string) bool {
+	if len(domain) == 0 || len(domain) > 253 {
+		return false
+	}
+	return domainRegex.MatchString(domain)
+}
+
+func validatePort(port int) bool {
+	return port >= 1024 && port <= 65535
+}
 
 func ListSites(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -73,6 +87,9 @@ func CreateSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 		if domain == "" {
 			return c.Status(fiber.StatusBadRequest).SendString("Domain is required")
 		}
+		if !validateDomain(domain) {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid domain format")
+		}
 
 		templateSlug := c.FormValue("template_slug")
 		composePath := strings.TrimSpace(c.FormValue("compose_path"))
@@ -99,6 +116,9 @@ func CreateSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 				log.Printf("failed to assign port: %v", err)
 				port = 8080
 			}
+		}
+		if !validatePort(port) {
+			return c.Status(fiber.StatusBadRequest).SendString("Port must be between 1024 and 65535")
 		}
 
 		var serverID sql.NullInt64
@@ -195,7 +215,7 @@ func DeploySite(db *sql.DB) fiber.Handler {
 			if err := docker.LocalComposeUp(ctx, site.ComposePath); err != nil {
 				log.Printf("local deploy failed for site %d (%s): %v", id, site.Domain, err)
 				_ = models.UpdateSiteStatus(db, id, "error")
-				return c.Status(fiber.StatusInternalServerError).SendString("Deploy failed: " + err.Error())
+				return c.Status(fiber.StatusInternalServerError).SendString("Deploy failed")
 			}
 		} else {
 			if !site.ServerID.Valid {
@@ -213,7 +233,7 @@ func DeploySite(db *sql.DB) fiber.Handler {
 			); err != nil {
 				log.Printf("deploy failed for site %d (%s): %v", id, site.Domain, err)
 				_ = models.UpdateSiteStatus(db, id, "error")
-				return c.Status(fiber.StatusInternalServerError).SendString("Deployment failed: " + err.Error())
+				return c.Status(fiber.StatusInternalServerError).SendString("Deployment failed")
 			}
 		}
 
@@ -246,7 +266,7 @@ func StartSite(db *sql.DB) fiber.Handler {
 			defer cancel()
 			if err := docker.LocalComposeStart(ctx, site.ComposePath); err != nil {
 				log.Printf("local start failed for site %d: %v", id, err)
-				return c.Status(fiber.StatusInternalServerError).SendString("Start failed: " + err.Error())
+				return c.Status(fiber.StatusInternalServerError).SendString("Start failed")
 			}
 		} else {
 			if !site.ServerID.Valid {
@@ -262,7 +282,7 @@ func StartSite(db *sql.DB) fiber.Handler {
 				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey, site.ContainerName,
 			); err != nil {
 				log.Printf("start failed for site %d: %v", id, err)
-				return c.Status(fiber.StatusInternalServerError).SendString("Start failed: " + err.Error())
+				return c.Status(fiber.StatusInternalServerError).SendString("Start failed")
 			}
 		}
 
@@ -295,7 +315,7 @@ func StopSite(db *sql.DB) fiber.Handler {
 			defer cancel()
 			if err := docker.LocalComposeStop(ctx, site.ComposePath); err != nil {
 				log.Printf("local stop failed for site %d: %v", id, err)
-				return c.Status(fiber.StatusInternalServerError).SendString("Stop failed: " + err.Error())
+				return c.Status(fiber.StatusInternalServerError).SendString("Stop failed")
 			}
 		} else {
 			if !site.ServerID.Valid {
@@ -311,7 +331,7 @@ func StopSite(db *sql.DB) fiber.Handler {
 				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey, site.ContainerName,
 			); err != nil {
 				log.Printf("stop failed for site %d: %v", id, err)
-				return c.Status(fiber.StatusInternalServerError).SendString("Stop failed: " + err.Error())
+				return c.Status(fiber.StatusInternalServerError).SendString("Stop failed")
 			}
 		}
 
@@ -344,7 +364,7 @@ func RestartSite(db *sql.DB) fiber.Handler {
 			defer cancel()
 			if err := docker.LocalComposeRestart(ctx, site.ComposePath); err != nil {
 				log.Printf("local restart failed for site %d: %v", id, err)
-				return c.Status(fiber.StatusInternalServerError).SendString("Restart failed: " + err.Error())
+				return c.Status(fiber.StatusInternalServerError).SendString("Restart failed")
 			}
 		} else {
 			if !site.ServerID.Valid {
@@ -360,7 +380,7 @@ func RestartSite(db *sql.DB) fiber.Handler {
 				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey, site.ContainerName,
 			); err != nil {
 				log.Printf("restart failed for site %d: %v", id, err)
-				return c.Status(fiber.StatusInternalServerError).SendString("Restart failed: " + err.Error())
+				return c.Status(fiber.StatusInternalServerError).SendString("Restart failed")
 			}
 		}
 

@@ -87,6 +87,16 @@ templ Backups(backups []backup.BackupInfo) {
 													>
 														Download
 													</a>
+													if b.Type == "database" {
+														<button
+															hx-post={ "/backups/" + b.Name + "/restore" }
+															hx-swap="none"
+															hx-confirm="Restore database from this backup? A safety backup will be created first."
+															class="text-amber-600 hover:text-amber-800 text-xs font-medium"
+														>
+															Restore
+														</button>
+													}
 													<button
 														hx-delete={ "/backups/" + b.Name }
 														hx-target={ "#backup-" + b.Name }

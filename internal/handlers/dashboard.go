@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"strconv"
 
 	"ezweb/internal/models"
@@ -15,15 +16,24 @@ func Dashboard(db *sql.DB) fiber.Handler {
 		var customerCount, siteCount, serverCount, overdueCount int
 		var runningCount, stoppedCount, errorCount int
 
-		_ = db.QueryRow("SELECT COUNT(*) FROM customers").Scan(&customerCount)
-		_ = db.QueryRow("SELECT COUNT(*) FROM sites").Scan(&siteCount)
-		_ = db.QueryRow("SELECT COUNT(*) FROM servers").Scan(&serverCount)
-		_ = db.QueryRow("SELECT COUNT(*) FROM payments WHERE paid_at IS NULL AND due_date < date('now')").Scan(&overdueCount)
-		_ = db.QueryRow("SELECT COUNT(*) FROM sites WHERE status = 'running'").Scan(&runningCount)
-		_ = db.QueryRow("SELECT COUNT(*) FROM sites WHERE status = 'stopped'").Scan(&stoppedCount)
-		_ = db.QueryRow("SELECT COUNT(*) FROM sites WHERE status = 'error'").Scan(&errorCount)
+		scanCount := func(query string, dest *int) {
+			if err := db.QueryRow(query).Scan(dest); err != nil {
+				log.Printf("dashboard query failed (%s): %v", query, err)
+			}
+		}
 
-		activities, _ := models.GetRecentActivities(db, 10)
+		scanCount("SELECT COUNT(*) FROM customers", &customerCount)
+		scanCount("SELECT COUNT(*) FROM sites", &siteCount)
+		scanCount("SELECT COUNT(*) FROM servers", &serverCount)
+		scanCount("SELECT COUNT(*) FROM payments WHERE paid_at IS NULL AND due_date < date('now')", &overdueCount)
+		scanCount("SELECT COUNT(*) FROM sites WHERE status = 'running'", &runningCount)
+		scanCount("SELECT COUNT(*) FROM sites WHERE status = 'stopped'", &stoppedCount)
+		scanCount("SELECT COUNT(*) FROM sites WHERE status = 'error'", &errorCount)
+
+		activities, err := models.GetRecentActivities(db, 10)
+		if err != nil {
+			log.Printf("dashboard: failed to load activities: %v", err)
+		}
 
 		data := pages.DashboardData{
 			CustomerCount: strconv.Itoa(customerCount),

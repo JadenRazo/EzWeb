@@ -6,6 +6,7 @@ import (
 	"ezweb/views/layouts"
 	"fmt"
 	"strconv"
+	"time"
 )
 
 func siteStatusColor(status string) string {
@@ -125,6 +126,20 @@ templ SiteDetailPage(site models.Site, servers []models.Server, templates []mode
 										}
 									</dd>
 								</div>
+								if site.SSLEnabled && site.SSLExpiry.Valid {
+									<div class="flex justify-between items-center">
+										<dt class="text-sm font-medium text-gray-500">Cert Expiry</dt>
+										<dd class="text-sm text-gray-900">
+											if time.Until(site.SSLExpiry.Time) <= 0 {
+												@components.Badge("Expired", "red")
+											} else if time.Until(site.SSLExpiry.Time) <= 14*24*time.Hour {
+												@components.Badge(site.SSLExpiry.Time.Format("Jan 2, 2006"), "yellow")
+											} else {
+												@components.Badge(site.SSLExpiry.Time.Format("Jan 2, 2006"), "green")
+											}
+										</dd>
+									</div>
+								}
 							</dl>
 						}
 					</div>
@@ -220,18 +235,29 @@ templ SiteDetailPage(site models.Site, servers []models.Server, templates []mode
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 					<div class="lg:col-span-2">
 						@components.Card("Logs") {
-							<div class="flex justify-end mb-3">
+							<div class="flex flex-wrap items-center gap-3 mb-3" x-data="{ lines: '200', search: '' }">
+								<select x-model="lines" class="rounded-lg border border-gray-300 text-sm py-1.5 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+									<option value="100">100 lines</option>
+									<option value="200" selected>200 lines</option>
+									<option value="500">500 lines</option>
+									<option value="1000">1000 lines</option>
+								</select>
+								<input
+									type="text"
+									x-model="search"
+									placeholder="Search logs..."
+									class="flex-1 min-w-0 rounded-lg border border-gray-300 text-sm py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+								/>
 								<button
-									hx-get={ fmt.Sprintf("/sites/%d/logs", site.ID) }
-									hx-target="#log-output"
-									hx-swap="innerHTML"
-									class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+									@click={ fmt.Sprintf("$refs.logOutput.setAttribute('hx-get', '/sites/%d/logs?lines=' + lines + '&search=' + encodeURIComponent(search)); htmx.trigger($refs.logOutput, 'revealed')", site.ID) }
+									class="px-3 py-1.5 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors"
 								>
-									Refresh Logs
+									Refresh
 								</button>
 							</div>
 							<div
 								id="log-output"
+								x-ref="logOutput"
 								hx-get={ fmt.Sprintf("/sites/%d/logs", site.ID) }
 								hx-trigger="load"
 								hx-swap="innerHTML"

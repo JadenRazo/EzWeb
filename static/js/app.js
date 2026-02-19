@@ -26,7 +26,10 @@ var EzModal = (function() {
         if (overlayClose) {
             var oid = overlayClose.getAttribute('data-close-overlay');
             var oel = document.getElementById(oid);
-            if (oel) oel.classList.remove('is-visible');
+            if (oel) {
+                oel.classList.remove('is-visible');
+                if (oid === 'shortcuts-overlay') localStorage.removeItem('shortcuts-visible');
+            }
         }
     });
 
@@ -123,6 +126,33 @@ document.addEventListener('htmx:sendError', function() {
 (function() {
     var pendingKey = null;
 
+    function showOverlay() {
+        var overlay = document.getElementById('shortcuts-overlay');
+        if (overlay) {
+            overlay.classList.add('is-visible');
+            localStorage.setItem('shortcuts-visible', '1');
+        }
+    }
+
+    function hideOverlay() {
+        var overlay = document.getElementById('shortcuts-overlay');
+        if (overlay) {
+            overlay.classList.remove('is-visible');
+            localStorage.removeItem('shortcuts-visible');
+        }
+    }
+
+    // Restore overlay state on load and after HTMX swaps
+    function restoreOverlay() {
+        if (localStorage.getItem('shortcuts-visible') === '1') {
+            var overlay = document.getElementById('shortcuts-overlay');
+            if (overlay) overlay.classList.add('is-visible');
+        }
+    }
+
+    restoreOverlay();
+    document.addEventListener('htmx:afterSettle', restoreOverlay);
+
     document.addEventListener('keydown', function(e) {
         // Don't trigger when typing in inputs
         var tag = e.target.tagName;
@@ -138,11 +168,13 @@ document.addEventListener('htmx:sendError', function() {
             return;
         }
 
-        // ? — show shortcuts help
+        // ? — toggle shortcuts help
         if (e.key === '?') {
             var overlay = document.getElementById('shortcuts-overlay');
-            if (overlay) {
-                overlay.classList.toggle('is-visible');
+            if (overlay && overlay.classList.contains('is-visible')) {
+                hideOverlay();
+            } else {
+                showOverlay();
             }
             return;
         }
@@ -151,7 +183,7 @@ document.addEventListener('htmx:sendError', function() {
         if (e.key === 'Escape') {
             var overlay = document.getElementById('shortcuts-overlay');
             if (overlay && overlay.classList.contains('is-visible')) {
-                overlay.classList.remove('is-visible');
+                hideOverlay();
                 return;
             }
             EzModal.close();

@@ -32,7 +32,7 @@ func ScanProjects(db *sql.DB) fiber.Handler {
 		projects, err := docker.ScanLocalProjects(ctx)
 		if err != nil {
 			log.Printf("scan failed: %v", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Failed to scan: " + err.Error())
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to scan local projects")
 		}
 
 		// Filter out projects already managed by EzWeb
@@ -62,6 +62,9 @@ func ImportProject(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 		if composePath == "" || domain == "" {
 			return c.Status(fiber.StatusBadRequest).SendString("Compose path and domain are required")
 		}
+		if !validateDomain(domain) {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid domain format")
+		}
 
 		containerName := strings.ReplaceAll(domain, ".", "-")
 
@@ -69,7 +72,7 @@ func ImportProject(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 		if routingJSON != "" {
 			var rc models.RoutingConfig
 			if err := json.Unmarshal([]byte(routingJSON), &rc); err != nil {
-				return c.Status(fiber.StatusBadRequest).SendString("Invalid routing config JSON: " + err.Error())
+				return c.Status(fiber.StatusBadRequest).SendString("Invalid routing config JSON")
 			}
 			routingConfig = &rc
 		}
@@ -85,7 +88,7 @@ func ImportProject(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 
 		if err := models.CreateSite(db, site); err != nil {
 			log.Printf("failed to import project: %v", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Failed to import: " + err.Error())
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to import project")
 		}
 
 		// Trigger Caddy reload

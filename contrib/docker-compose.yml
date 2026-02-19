@@ -1,0 +1,26 @@
+services:
+  ezweb:
+    build: ..
+    container_name: ezweb
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ezweb-data:/app/data
+      - ezweb-backups:/app/backups
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    env_file:
+      - .env
+    environment:
+      - DB_PATH=/app/data/ezweb.db
+      - BACKUP_DIR=/app/backups
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  ezweb-data:
+  ezweb-backups:

@@ -72,6 +72,35 @@ templ navItem(href string, label string, currentPath string, icon templ.Componen
 	}
 }
 
+templ backupIcon() {
+	<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+		<path d="M3 3v5h5"></path>
+		<path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+		<path d="M16 16h5v5"></path>
+	</svg>
+}
+
+templ usersIcon() {
+	<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+		<circle cx="9" cy="7" r="4"></circle>
+		<path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+		<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+		<line x1="19" y1="8" x2="23" y2="8"></line>
+		<line x1="21" y1="6" x2="21" y2="10"></line>
+	</svg>
+}
+
+templ darkModeToggle() {
+	<button onclick="toggleDarkMode()" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-500 hover:text-yellow-400 hover:bg-yellow-500/10 transition-all duration-200" title="Toggle dark mode">
+		<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+		</svg>
+		<span class="text-sm">Dark Mode</span>
+	</button>
+}
+
 templ Navbar(currentPath string) {
 	<div x-data="{ open: false }">
 		<!-- Mobile hamburger -->
@@ -95,6 +124,8 @@ templ Navbar(currentPath string) {
 		></div>
 		<!-- Sidebar with glass-morphism gradient -->
 		<aside
+			role="navigation"
+			aria-label="Main navigation"
 			:class="open ? 'translate-x-0' : '-translate-x-full'"
 			class="fixed lg:translate-x-0 lg:static inset-y-0 left-0 z-40 w-64 text-white transition-transform duration-300 ease-in-out flex flex-col min-h-screen"
 			style="background: linear-gradient(180deg, #0f172a 0%, #111827 60%, #0f172a 100%);"
@@ -132,9 +163,12 @@ templ Navbar(currentPath string) {
 				</div>
 				@navItem("/customers", "Customers", currentPath, customerIcon())
 				@navItem("/payments", "Payments", currentPath, paymentIcon())
+				@navItem("/backups", "Backups", currentPath, backupIcon())
+				@navItem("/users", "Users", currentPath, usersIcon())
 			</nav>
-			<!-- Bottom section: logout -->
-			<div class="p-4 border-t border-white/10">
+			<!-- Bottom section: dark mode + logout -->
+			<div class="p-4 border-t border-white/10 space-y-1">
+				@darkModeToggle()
 				<a href="/logout" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 group">
 					@logoutIcon()
 					<span class="text-sm">Logout</span>
