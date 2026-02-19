@@ -88,6 +88,10 @@ This project is licensed under the [GNU General Public License v3.0](LICENSE).
 
 ## Architecture
 
+![Architecture](docs/architecture.svg)
+
+### Design Decisions
+
 - SSH exec over Docker TCP API for remote container management
 - Compose templates embedded in the binary via `go:embed`
 - Caddy admin API via SSH tunnel (never exposed publicly)
