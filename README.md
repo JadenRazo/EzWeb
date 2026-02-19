@@ -82,6 +82,10 @@ make prod-build
 | Landing Page | Simple Nginx landing page |
 | React SPA | Nginx serving a React SPA |
 
+## License
+
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
+
 ## Architecture
 
 - SSH exec over Docker TCP API for remote container management
