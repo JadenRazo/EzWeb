@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"ezweb/internal/models"
@@ -34,9 +36,16 @@ func PublicStatus(db *sql.DB) fiber.Handler {
 		}
 
 		result := make([]statusJSON, 0, len(sites))
+		hidden := 0
 		for _, site := range sites {
+			domain := site.Domain
+			if !strings.Contains(domain, "jadenrazo.dev") {
+				hidden++
+				domain = fmt.Sprintf("client-site-%d.example", hidden)
+			}
+
 			entry := statusJSON{
-				Domain:   site.Domain,
+				Domain:   domain,
 				Status:   site.Status,
 				Template: site.TemplateSlug,
 			}
