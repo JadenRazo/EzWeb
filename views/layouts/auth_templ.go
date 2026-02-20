@@ -42,7 +42,7 @@ func Auth(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " | EzWeb</title><link rel=\"icon\" href=\"data:,\"><link rel=\"stylesheet\" href=\"/static/css/tailwind.css\"><link rel=\"stylesheet\" href=\"/static/css/app.css\"><script defer src=\"/static/js/alpine.min.js\"></script><script src=\"/static/js/htmx.min.js\"></script></head><body class=\"bg-gray-900 min-h-screen flex items-center justify-center\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " | EzWeb</title><link rel=\"icon\" href=\"data:,\"><link rel=\"stylesheet\" href=\"/static/css/tailwind.css?v=12\"><link rel=\"stylesheet\" href=\"/static/css/app.css?v=12\"><script defer src=\"/static/js/alpine.min.js\"></script><script src=\"/static/js/htmx.min.js\"></script></head><body class=\"bg-gray-900 min-h-screen flex items-center justify-center\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
