@@ -33,6 +33,7 @@ type Config struct {
 	HealthRetentionDays   int
 	LockoutMaxAttempts    int
 	LockoutDurationMin    int
+	BcryptCost            int
 	SMTPHost     string
 	SMTPPort     int
 	SMTPFrom     string
@@ -68,6 +69,7 @@ func Load() (*Config, error) {
 		HealthRetentionDays:   getEnvInt("HEALTH_RETENTION_DAYS", 30),
 		LockoutMaxAttempts:    getEnvInt("LOCKOUT_MAX_ATTEMPTS", 5),
 		LockoutDurationMin:    getEnvInt("LOCKOUT_DURATION_MIN", 15),
+		BcryptCost:            getEnvInt("BCRYPT_COST", 12),
 		SMTPHost:     getEnv("SMTP_HOST", ""),
 		SMTPPort:     getEnvInt("SMTP_PORT", 587),
 		SMTPFrom:     getEnv("SMTP_FROM", ""),
@@ -89,6 +91,14 @@ func Load() (*Config, error) {
 
 	if len(cfg.JWTSecret) < 32 {
 		log.Println("WARNING: JWT_SECRET is shorter than 32 characters — use a longer secret in production")
+	}
+
+	if !cfg.SecureCookies {
+		log.Println("WARNING: SECURE_COOKIES is false — auth cookies will be sent over plain HTTP. Set to true in production.")
+	}
+
+	if cfg.BcryptCost < 10 || cfg.BcryptCost > 14 {
+		log.Printf("WARNING: BCRYPT_COST=%d is outside recommended range (10-14)", cfg.BcryptCost)
 	}
 
 	if cfg.BackupDir != "" {

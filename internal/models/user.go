@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
+	"ezweb/internal/auth"
 )
 
 type User struct {
@@ -104,24 +104,24 @@ func EnsureAdminExists(db *sql.DB, username, plainPassword string) error {
 
 	if err == sql.ErrNoRows {
 		// User doesn't exist yet — create it.
-		hash, err := bcrypt.GenerateFromPassword([]byte(plainPassword), bcrypt.DefaultCost)
+		hash, err := auth.HashPassword(plainPassword)
 		if err != nil {
 			return fmt.Errorf("failed to hash admin password: %w", err)
 		}
-		return CreateUser(db, username, string(hash))
+		return CreateUser(db, username, hash)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to check admin existence: %w", err)
 	}
 
 	// User exists — check whether the stored hash still matches the configured password.
-	if bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(plainPassword)) != nil {
+	if !auth.CheckPassword(currentHash, plainPassword) {
 		// Hash mismatch: the .env password was changed, so re-hash and update.
-		hash, err := bcrypt.GenerateFromPassword([]byte(plainPassword), bcrypt.DefaultCost)
+		hash, err := auth.HashPassword(plainPassword)
 		if err != nil {
 			return fmt.Errorf("failed to hash updated admin password: %w", err)
 		}
-		_, err = db.Exec("UPDATE users SET password = ? WHERE username = ?", string(hash), username)
+		_, err = db.Exec("UPDATE users SET password = ? WHERE username = ?", hash, username)
 		if err != nil {
 			return fmt.Errorf("failed to update admin password: %w", err)
 		}

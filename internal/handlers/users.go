@@ -43,8 +43,8 @@ func CreateUser(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).SendString("Username must be 3-50 characters and may only contain letters, numbers, underscores, hyphens, and dots")
 		}
 
-		if len(password) < 8 {
-			return c.Status(fiber.StatusBadRequest).SendString("Password must be at least 8 characters")
+		if err := auth.ValidatePasswordStrength(password); err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 		}
 
 		if role != "admin" && role != "viewer" {
@@ -112,8 +112,8 @@ func ChangePassword(db *sql.DB) fiber.Handler {
 		isSelf := targetID == currentUserID
 
 		newPassword := c.FormValue("new_password")
-		if len(newPassword) < 8 {
-			return c.Status(fiber.StatusBadRequest).SendString("New password must be at least 8 characters")
+		if err := auth.ValidatePasswordStrength(newPassword); err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 		}
 
 		target, err := models.GetUserByID(db, targetID)

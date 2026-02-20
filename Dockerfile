@@ -32,13 +32,13 @@ WORKDIR /app
 COPY --from=builder /app/ezweb .
 COPY --from=builder /app/static ./static
 
-RUN mkdir -p /app/backups && chown ezweb:ezweb /app/backups
+RUN mkdir -p /app/backups /app/data && chown ezweb:ezweb /app/backups /app/data
 
 USER ezweb
 
-EXPOSE 3000
+EXPOSE 8088
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget -qO- http://localhost:3000/healthz || exit 1
+    CMD wget -qO- http://localhost:8088/healthz || exit 1
 
 ENTRYPOINT ["./ezweb"]

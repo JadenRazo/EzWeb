@@ -37,6 +37,23 @@ func main() {
 	}
 	defer database.Close()
 
+	// Handle --backup CLI flag for use by the systemd backup timer.
+	if len(os.Args) > 1 && os.Args[1] == "--backup" {
+		mgr, err := backup.NewManager(cfg.BackupDir, database)
+		if err != nil {
+			log.Fatalf("Backup manager init failed: %v", err)
+		}
+		results, err := mgr.RunFullBackup(cfg.DBPath)
+		if err != nil {
+			log.Fatalf("Full backup failed: %v", err)
+		}
+		log.Printf("Backup complete: %d file(s)", len(results))
+		return
+	}
+
+	// Set bcrypt cost from config before any password hashing occurs
+	auth.BcryptCost = cfg.BcryptCost
+
 	// EnsureAdminExists hashes the password internally and updates the stored
 	// hash when the .env password has changed since the last run.
 	if err := models.EnsureAdminExists(database, cfg.AdminUser, cfg.AdminPass); err != nil {
@@ -46,11 +63,15 @@ func main() {
 	// Seed activity log for pre-existing entities (no-op if already populated)
 	models.BackfillActivities(database)
 
-	// Account lockout tracker
+	// Account lockout trackers — one keyed by IP, one by username
 	lockout := auth.NewLockoutTracker(cfg.LockoutMaxAttempts, time.Duration(cfg.LockoutDurationMin)*time.Minute)
+	userLockout := auth.NewLockoutTracker(cfg.LockoutMaxAttempts, time.Duration(cfg.LockoutDurationMin)*time.Minute)
 
 	// Backup manager
-	backupMgr := backup.NewManager(cfg.BackupDir, database)
+	backupMgr, err := backup.NewManager(cfg.BackupDir, database)
+	if err != nil {
+		log.Fatalf("Failed to initialize backup manager: %v", err)
+	}
 
 	// Caddy manager
 	caddyMgr := caddy.NewManager(cfg.CaddyfilePath, cfg.AcmeEmail)
@@ -86,7 +107,10 @@ func main() {
 
 	// Global middleware
 	app.Use(recover.New())
-	app.Use(helmet.New())
+	app.Use(helmet.New(helmet.Config{
+		ContentSecurityPolicy:   "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self' chrome-extension: moz-extension: safari-extension:; frame-ancestors 'none'",
+		CrossOriginOpenerPolicy: "same-origin-allow-popups",
+	}))
 
 	// Metrics middleware (counts requests, tracks latency)
 	if cfg.MetricsEnabled {
@@ -126,7 +150,7 @@ func main() {
 
 	// Public routes
 	app.Get("/login", handlers.LoginPage)
-	app.Post("/login", loginLimiter, handlers.LoginPost(database, cfg, lockout))
+	app.Post("/login", loginLimiter, handlers.LoginPost(database, cfg, lockout, userLockout))
 	app.Get("/logout", handlers.Logout(cfg, database))
 
 	// Protected routes

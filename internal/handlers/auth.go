@@ -19,28 +19,31 @@ func LoginPage(c *fiber.Ctx) error {
 	return pages.Login("").Render(c.Context(), c.Response().BodyWriter())
 }
 
-func LoginPost(db *sql.DB, cfg *config.Config, lockout *auth.LockoutTracker) fiber.Handler {
+func LoginPost(db *sql.DB, cfg *config.Config, lockout *auth.LockoutTracker, userLockout *auth.LockoutTracker) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		username := c.FormValue("username")
 		password := c.FormValue("password")
 		clientIP := c.IP()
 
-		if lockout.IsLocked(clientIP) {
+		safeUser := strings.ReplaceAll(strings.ReplaceAll(username, "\n", ""), "\r", "")
+
+		if lockout.IsLocked(clientIP) || userLockout.IsLocked(strings.ToLower(username)) {
 			c.Set("Content-Type", "text/html")
 			return pages.Login("Too many failed attempts. Please try again later.").Render(c.Context(), c.Response().BodyWriter())
 		}
 
-		safeUser := strings.ReplaceAll(strings.ReplaceAll(username, "\n", ""), "\r", "")
-
 		user, err := models.GetUserByUsername(db, username)
 		if err != nil || !auth.CheckPassword(user.Password, password) {
 			lockout.RecordFailure(clientIP)
+			userLockout.RecordFailure(strings.ToLower(username))
 			log.Printf("failed login attempt for user %q from %s", safeUser, clientIP)
+			models.LogActivityWithContext(db, "auth", 0, "login_failed", "Failed login for user "+safeUser, clientIP, c.Get("User-Agent"))
 			c.Set("Content-Type", "text/html")
 			return pages.Login("Invalid username or password").Render(c.Context(), c.Response().BodyWriter())
 		}
 
 		lockout.Reset(clientIP)
+		userLockout.Reset(strings.ToLower(username))
 		safeDBUser := strings.ReplaceAll(strings.ReplaceAll(user.Username, "\n", ""), "\r", "")
 		log.Printf("successful login for user %q from %s", safeDBUser, clientIP)
 
