@@ -5,6 +5,7 @@ import (
 	"ezweb/views/components"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 func serverStatusColor(status string) string {
@@ -19,7 +20,7 @@ func serverStatusColor(status string) string {
 }
 
 templ ServerRow(server models.Server) {
-	<tr id={ fmt.Sprintf("server-%d", server.ID) } class="border-b border-gray-100 hover:bg-gray-50/80 transition-colors duration-100">
+	<tr id={ fmt.Sprintf("server-%d", server.ID) } data-name={ strings.ToLower(server.Name) } data-host={ strings.ToLower(server.Host) } data-status={ server.Status } class="border-b border-gray-100 hover:bg-gray-50/80 transition-colors duration-100">
 		<td class="px-6 py-4 font-medium text-gray-900 text-sm">{ server.Name }</td>
 		<td class="px-6 py-4 text-sm text-gray-600 font-mono">{ server.Host }</td>
 		<td class="px-6 py-4 text-sm text-gray-600">{ strconv.Itoa(server.SSHPort) }</td>

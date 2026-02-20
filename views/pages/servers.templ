@@ -13,7 +13,7 @@ templ Servers(localInfo docker.LocalServerInfo, servers []models.Server) {
 	@layouts.Base("Servers") {
 		<div class="flex min-h-screen">
 			@components.Navbar("/servers")
-			<main class="flex-1 p-6 lg:p-10 pt-16 lg:pt-10">
+			<main class="flex-1 p-6 lg:p-10 pt-16 lg:pt-10" x-data="serverFilter()">
 				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
 					<div>
 						<h2 class="text-2xl font-bold text-gray-900">Servers</h2>
@@ -30,6 +30,25 @@ templ Servers(localInfo docker.LocalServerInfo, servers []models.Server) {
 					</button>
 				</div>
 
+				<!-- Search Bar -->
+				<div class="mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+					<div class="w-full sm:flex-1 sm:min-w-[200px]">
+						<input
+							type="text"
+							placeholder="Search by name or host..."
+							x-model="searchQuery"
+							class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+						/>
+					</div>
+					<button
+						x-show="searchQuery"
+						x-cloak
+						@click="searchQuery = ''"
+						class="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+					>
+						Clear
+					</button>
+				</div>
 				@components.Card("") {
 					@components.Table() {
 						<thead>
@@ -119,6 +138,26 @@ templ Servers(localInfo docker.LocalServerInfo, servers []models.Server) {
 					</form>
 				}
 			</main>
+			<script>
+function serverFilter() {
+    return {
+        searchQuery: '',
+        filterRows() {
+            var rows = document.querySelectorAll('#server-list tr[data-name]');
+            var q = this.searchQuery.toLowerCase();
+            rows.forEach(function(row) {
+                var name = row.getAttribute('data-name') || '';
+                var host = row.getAttribute('data-host') || '';
+                var show = !q || name.indexOf(q) !== -1 || host.indexOf(q) !== -1;
+                row.style.display = show ? '' : 'none';
+            });
+        },
+        init() {
+            this.$watch('searchQuery', () => this.filterRows());
+        }
+    }
+}
+			</script>
 		</div>
 	}
 }

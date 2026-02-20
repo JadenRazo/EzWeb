@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"ezweb/internal/auth"
 	"ezweb/internal/docker"
 	"ezweb/internal/models"
 	sshutil "ezweb/internal/ssh"
@@ -84,10 +85,14 @@ func (ch *Checker) checkAll() {
 	}
 	defer ch.running.Store(0)
 
-	// Prune health checks older than 30 days.
-	ch.DB.Exec(fmt.Sprintf("DELETE FROM health_checks WHERE checked_at < datetime('now', '-%d days')", ch.HealthRetentionDays))
+	// Prune health checks older than retention period.
+	healthCutoff := time.Now().AddDate(0, 0, -ch.HealthRetentionDays).UTC().Format(time.RFC3339)
+	ch.DB.Exec("DELETE FROM health_checks WHERE checked_at < ?", healthCutoff)
 	// Prune activity log entries older than configured retention.
-	ch.DB.Exec(fmt.Sprintf("DELETE FROM activity_log WHERE created_at < datetime('now', '-%d days')", ch.ActivityRetentionDays))
+	activityCutoff := time.Now().AddDate(0, 0, -ch.ActivityRetentionDays).UTC().Format(time.RFC3339)
+	ch.DB.Exec("DELETE FROM activity_log WHERE created_at < ?", activityCutoff)
+	// Prune expired revoked tokens.
+	auth.CleanupExpiredTokens(ch.DB)
 
 	sites, err := models.GetAllSites(ch.DB)
 	if err != nil {

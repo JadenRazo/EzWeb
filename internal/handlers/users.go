@@ -53,7 +53,7 @@ func CreateUser(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to create user")
 		}
 
-		models.LogActivity(db, "user", 0, "created", "Created user "+username)
+		models.LogActivityWithContext(db, "user", 0, "created", "Created user "+username, c.IP(), c.Get("User-Agent"))
 
 		if c.Get("HX-Request") != "" {
 			c.Set("HX-Redirect", "/users")
@@ -81,7 +81,7 @@ func DeleteUserHandler(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete user")
 		}
 
-		models.LogActivity(db, "user", id, "deleted", "Deleted user")
+		models.LogActivityWithContext(db, "user", id, "deleted", "Deleted user", c.IP(), c.Get("User-Agent"))
 
 		if c.Get("HX-Request") != "" {
 			return c.SendString("")

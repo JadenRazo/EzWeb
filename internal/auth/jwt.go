@@ -1,10 +1,12 @@
 package auth
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type Claims struct {
@@ -20,6 +22,7 @@ func GenerateToken(userID int, username, role, secret string, expiryHours int) (
 		Username: username,
 		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.NewString(),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expiryHours) * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
@@ -48,4 +51,31 @@ func ValidateToken(tokenString, secret string) (*Claims, error) {
 		return nil, fmt.Errorf("token is not valid")
 	}
 	return claims, nil
+}
+
+// RevokeToken inserts the token's JTI into the blocklist so it cannot be reused.
+func RevokeToken(db *sql.DB, jti string, expiresAt time.Time) error {
+	_, err := db.Exec(
+		"INSERT OR IGNORE INTO revoked_tokens (jti, expires_at) VALUES (?, ?)",
+		jti, expiresAt,
+	)
+	return err
+}
+
+// IsRevoked checks whether a token JTI has been revoked.
+func IsRevoked(db *sql.DB, jti string) bool {
+	if jti == "" {
+		return false
+	}
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM revoked_tokens WHERE jti = ?", jti).Scan(&count)
+	if err != nil {
+		return false
+	}
+	return count > 0
+}
+
+// CleanupExpiredTokens removes revoked token entries that have already expired.
+func CleanupExpiredTokens(db *sql.DB) {
+	db.Exec("DELETE FROM revoked_tokens WHERE expires_at < ?", time.Now().UTC().Format(time.RFC3339))
 }

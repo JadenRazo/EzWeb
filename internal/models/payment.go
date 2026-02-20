@@ -161,6 +161,34 @@ func CountOverduePayments(db *sql.DB) (int, error) {
 	return count, nil
 }
 
+func CountPayments(db *sql.DB) (int, error) {
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM payments").Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count payments: %w", err)
+	}
+	return count, nil
+}
+
+func GetPaymentsPaginated(db *sql.DB, limit, offset int) ([]Payment, error) {
+	query := "SELECT " + paymentSelectColumns + paymentFromJoins + " ORDER BY p.due_date ASC LIMIT ? OFFSET ?"
+	rows, err := db.Query(query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query payments: %w", err)
+	}
+	defer rows.Close()
+
+	var payments []Payment
+	for rows.Next() {
+		p, err := scanPayment(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan payment: %w", err)
+		}
+		payments = append(payments, *p)
+	}
+	return payments, rows.Err()
+}
+
 func GetSitesForDropdown(db *sql.DB) ([]SiteDropdown, error) {
 	rows, err := db.Query("SELECT id, domain FROM sites ORDER BY domain ASC")
 	if err != nil {

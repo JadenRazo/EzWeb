@@ -3,10 +3,11 @@ package partials
 import (
 	"ezweb/internal/models"
 	"fmt"
+	"strings"
 )
 
 templ CustomerRow(customer models.Customer) {
-	<tr class="border-b border-gray-100 hover:bg-gray-50/80 transition-colors duration-100" id={ fmt.Sprintf("customer-%d", customer.ID) }>
+	<tr class="border-b border-gray-100 hover:bg-gray-50/80 transition-colors duration-100" id={ fmt.Sprintf("customer-%d", customer.ID) } data-name={ strings.ToLower(customer.Name) } data-email={ strings.ToLower(customer.Email) } data-company={ strings.ToLower(customer.Company) }>
 		<td class="px-6 py-4 text-sm text-gray-900 font-medium">{ customer.Name }</td>
 		<td class="px-6 py-4 text-sm text-gray-600">{ customer.Email }</td>
 		<td class="px-6 py-4 text-sm text-gray-600">{ customer.Phone }</td>

@@ -67,6 +67,17 @@ CREATE TABLE IF NOT EXISTS payments (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS site_env_vars (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id, key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_env_vars_site_id ON site_env_vars(site_id);
+
 CREATE TABLE IF NOT EXISTS health_checks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
@@ -82,6 +93,8 @@ CREATE TABLE IF NOT EXISTS activity_log (
     entity_id INTEGER,
     action TEXT NOT NULL,
     details TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -93,6 +106,17 @@ CREATE INDEX IF NOT EXISTS idx_sites_status ON sites(status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sites_port_unique ON sites(port) WHERE port > 0;
 CREATE INDEX IF NOT EXISTS idx_payments_customer_id ON payments(customer_id);
 CREATE INDEX IF NOT EXISTS idx_payments_due_date ON payments(due_date);
+CREATE TABLE IF NOT EXISTS revoked_tokens (
+    jti TEXT PRIMARY KEY,
+    expires_at DATETIME NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_revoked_tokens_expires ON revoked_tokens(expires_at);
+
+-- Add ip_address and user_agent to activity_log if upgrading from an older schema.
+-- SQLite does not support ADD COLUMN IF NOT EXISTS, so we ignore the error
+-- if the column already exists (handled by the Go migration code).
+
 CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_entity_time ON activity_log(entity_type, entity_id, created_at DESC);

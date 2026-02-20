@@ -127,10 +127,10 @@ func main() {
 	// Public routes
 	app.Get("/login", handlers.LoginPage)
 	app.Post("/login", loginLimiter, handlers.LoginPost(database, cfg, lockout))
-	app.Get("/logout", handlers.Logout(cfg))
+	app.Get("/logout", handlers.Logout(cfg, database))
 
 	// Protected routes
-	protected := app.Group("/", auth.AuthMiddleware(cfg.JWTSecret))
+	protected := app.Group("/", auth.AuthMiddleware(cfg.JWTSecret, database))
 
 	// General rate limiter for protected routes
 	protected.Use(limiter.New(limiter.Config{
@@ -158,78 +158,83 @@ func main() {
 	// Dashboard
 	protected.Get("/dashboard", handlers.Dashboard(database))
 
-	// Customer CRUD
+	// Read-only routes (any authenticated user)
 	protected.Get("/customers", handlers.ListCustomers(database))
-	protected.Post("/customers", handlers.CreateCustomer(database))
 	protected.Get("/customers/:id/edit", handlers.EditCustomerForm(database))
 	protected.Get("/customers/:id/cancel", handlers.CancelEditCustomer(database))
-	protected.Put("/customers/:id", handlers.UpdateCustomer(database))
-	protected.Delete("/customers/:id", handlers.DeleteCustomer(database))
-
-	// Server CRUD + Test Connection
 	protected.Get("/servers", handlers.ListServers(database))
-	protected.Post("/servers", handlers.CreateServerHandler(database))
 	protected.Get("/servers/:id/edit", handlers.EditServerForm(database))
 	protected.Get("/servers/:id/row", handlers.CancelEditServer(database))
-	protected.Put("/servers/:id", handlers.UpdateServerHandler(database))
-	protected.Delete("/servers/:id", handlers.DeleteServerHandler(database))
-	protected.Post("/servers/:id/test", handlers.TestServerConnection(database))
-
-	// Site CRUD + Deploy/Control
 	protected.Get("/sites", handlers.ListSites(database))
 	protected.Get("/sites/new", handlers.CreateSiteForm(database))
-	protected.Post("/sites", handlers.CreateSite(database, caddyMgr))
 	protected.Get("/sites/:id", handlers.SiteDetail(database))
-	protected.Put("/sites/:id", handlers.UpdateSite(database, caddyMgr))
-	protected.Delete("/sites/:id", handlers.DeleteSite(database, caddyMgr))
-	protected.Post("/sites/:id/deploy", handlers.DeploySite(database))
 	protected.Get("/sites/:id/deploy/stream", handlers.DeploySSE(database))
-	protected.Post("/sites/:id/start", handlers.StartSite(database))
-	protected.Post("/sites/:id/stop", handlers.StopSite(database))
-	protected.Post("/sites/:id/restart", handlers.RestartSite(database))
-
-	// Site Logs + Health
 	protected.Get("/sites/:id/logs", handlers.GetSiteLogs(database))
 	protected.Get("/sites/:id/health", handlers.GetSiteHealth(database))
-
-	// Import
+	protected.Get("/sites/:id/env", handlers.ListSiteEnvVars(database))
 	protected.Get("/import", handlers.ImportPage())
-	protected.Post("/import/scan", handlers.ScanProjects(database))
-	protected.Post("/import", handlers.ImportProject(database, caddyMgr))
-
-	// Payment CRUD
 	protected.Get("/payments", handlers.ListPayments(database))
-	protected.Post("/payments", handlers.CreatePayment(database))
 	protected.Get("/payments/:id/edit", handlers.EditPaymentForm(database))
 	protected.Get("/payments/:id/row", handlers.CancelEditPayment(database))
-	protected.Put("/payments/:id", handlers.UpdatePayment(database))
-	protected.Post("/payments/:id/mark-paid", handlers.MarkPaid(database))
-	protected.Delete("/payments/:id", handlers.DeletePayment(database))
-
-	// CSV Exports
 	protected.Get("/export/sites", handlers.ExportSitesCSV(database))
 	protected.Get("/export/customers", handlers.ExportCustomersCSV(database))
 	protected.Get("/export/payments", handlers.ExportPaymentsCSV(database))
-
-	// Backups
 	protected.Get("/backups", handlers.BackupsPage(backupMgr))
-	protected.Post("/backups/database", handlers.CreateDatabaseBackup(backupMgr, cfg.DBPath))
-	protected.Post("/backups/full", handlers.CreateFullBackup(backupMgr, cfg.DBPath))
-	protected.Post("/sites/:id/backup", handlers.CreateSiteBackupHandler(backupMgr, func(id int) (*models.Site, error) {
+	protected.Get("/backups/:name/download", handlers.DownloadBackup(backupMgr))
+	protected.Get("/api/templates", handlers.ListTemplates(database))
+
+	// Write routes (admin only via WriteProtect)
+	write := protected.Group("/", auth.WriteProtect())
+
+	// Customer writes
+	write.Post("/customers", handlers.CreateCustomer(database))
+	write.Put("/customers/:id", handlers.UpdateCustomer(database))
+	write.Delete("/customers/:id", handlers.DeleteCustomer(database))
+
+	// Server writes
+	write.Post("/servers", handlers.CreateServerHandler(database, cfg.SSHKeyDir))
+	write.Put("/servers/:id", handlers.UpdateServerHandler(database, cfg.SSHKeyDir))
+	write.Delete("/servers/:id", handlers.DeleteServerHandler(database))
+	write.Post("/servers/:id/test", handlers.TestServerConnection(database))
+
+	// Site writes
+	write.Post("/sites/bulk", handlers.BulkSiteAction(database))
+	write.Post("/sites", handlers.CreateSite(database, caddyMgr))
+	write.Put("/sites/:id", handlers.UpdateSite(database, caddyMgr))
+	write.Delete("/sites/:id", handlers.DeleteSite(database, caddyMgr))
+	write.Post("/sites/:id/deploy", handlers.DeploySite(database))
+	write.Post("/sites/:id/start", handlers.StartSite(database))
+	write.Post("/sites/:id/stop", handlers.StopSite(database))
+	write.Post("/sites/:id/restart", handlers.RestartSite(database))
+
+	// Site env var writes
+	write.Post("/sites/:id/env", handlers.CreateSiteEnvVar(database))
+	write.Delete("/sites/:id/env/:varId", handlers.DeleteSiteEnvVar(database))
+
+	// Import writes
+	write.Post("/import/scan", handlers.ScanProjects(database))
+	write.Post("/import", handlers.ImportProject(database, caddyMgr))
+
+	// Payment writes
+	write.Post("/payments", handlers.CreatePayment(database))
+	write.Put("/payments/:id", handlers.UpdatePayment(database))
+	write.Post("/payments/:id/mark-paid", handlers.MarkPaid(database))
+	write.Delete("/payments/:id", handlers.DeletePayment(database))
+
+	// Backup writes (admin only)
+	write.Post("/backups/database", handlers.CreateDatabaseBackup(backupMgr, cfg.DBPath))
+	write.Post("/backups/full", handlers.CreateFullBackup(backupMgr, cfg.DBPath))
+	write.Post("/sites/:id/backup", handlers.CreateSiteBackupHandler(backupMgr, func(id int) (*models.Site, error) {
 		return models.GetSiteByID(database, id)
 	}))
-	protected.Delete("/backups/:name", handlers.DeleteBackup(backupMgr))
-	protected.Get("/backups/:name/download", handlers.DownloadBackup(backupMgr))
-	protected.Post("/backups/:name/restore", handlers.RestoreBackup(backupMgr, cfg.DBPath))
+	write.Delete("/backups/:name", handlers.DeleteBackup(backupMgr))
+	write.Post("/backups/:name/restore", handlers.RestoreBackup(backupMgr, cfg.DBPath))
 
-	// User management (admin only)
+	// User management (admin only — extra AdminOnly guard)
 	adminOnly := protected.Group("/", auth.AdminOnly())
 	adminOnly.Get("/users", handlers.ListUsers(database))
 	adminOnly.Post("/users", handlers.CreateUser(database))
 	adminOnly.Delete("/users/:id", handlers.DeleteUserHandler(database))
-
-	// Templates API
-	protected.Get("/api/templates", handlers.ListTemplates(database))
 
 	// Redirect root to dashboard
 	app.Get("/", func(c *fiber.Ctx) error {

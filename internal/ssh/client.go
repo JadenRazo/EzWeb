@@ -21,16 +21,15 @@ func NewClientWithHostKey(host string, port int, user string, keyPath string, kn
 		return nil, err
 	}
 
-	var hostKeyCallback ssh.HostKeyCallback
-	if knownHostKey != "" {
-		pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(knownHostKey))
-		if err != nil {
-			return nil, fmt.Errorf("invalid stored host key: %w", err)
-		}
-		hostKeyCallback = ssh.FixedHostKey(pubKey)
-	} else {
-		hostKeyCallback = ssh.InsecureIgnoreHostKey()
+	if knownHostKey == "" {
+		return nil, fmt.Errorf("host key is required — run a host key probe first")
 	}
+
+	pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(knownHostKey))
+	if err != nil {
+		return nil, fmt.Errorf("invalid stored host key: %w", err)
+	}
+	hostKeyCallback := ssh.FixedHostKey(pubKey)
 
 	config := &ssh.ClientConfig{
 		User: user,
@@ -93,12 +92,8 @@ func RunCommand(client *ssh.Client, cmd string) (string, error) {
 
 // TestConnection verifies SSH access and checks for a running Docker daemon
 // by executing `docker info` on the remote host. Returns the Docker server
-// version string on success.
-//
-// If hostKey is non-empty, the connection is verified against the stored
-// public key (pinned TOFU). If hostKey is empty (first-time probe), the
-// connection falls back to InsecureIgnoreHostKey so the caller can then
-// persist the key via GetHostKey.
+// version string on success. The hostKey parameter is required — callers
+// must probe and store the host key via GetHostKey before calling this.
 func TestConnection(host string, port int, user string, keyPath string, hostKey string) (string, error) {
 	client, err := NewClientWithHostKey(host, port, user, keyPath, hostKey)
 	if err != nil {

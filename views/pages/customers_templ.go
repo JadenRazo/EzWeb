@@ -15,7 +15,7 @@ import (
 	"ezweb/views/partials"
 )
 
-func Customers(customers []models.Customer, flash string) templ.Component {
+func Customers(customers []models.Customer, flash string, currentPage int, totalItems int, itemsPerPage int) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -56,7 +56,7 @@ func Customers(customers []models.Customer, flash string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<main class=\"flex-1 p-8 lg:pl-8 pl-4 pt-16 lg:pt-8\"><div class=\"flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6\"><div><h2 class=\"text-2xl font-bold text-gray-900\">Customers</h2><p class=\"text-sm text-gray-500 mt-1\">Manage client information and contact details</p></div><button data-modal-open=\"add-customer\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-150\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"2.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 4.5v15m7.5-7.5h-15\"></path></svg> Add Customer</button></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<main class=\"flex-1 p-8 lg:pl-8 pl-4 pt-16 lg:pt-8\" x-data=\"customerFilter()\"><div class=\"flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6\"><div><h2 class=\"text-2xl font-bold text-gray-900\">Customers</h2><p class=\"text-sm text-gray-500 mt-1\">Manage client information and contact details</p></div><button data-modal-open=\"add-customer\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-150\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"2.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 4.5v15m7.5-7.5h-15\"></path></svg> Add Customer</button></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -65,6 +65,10 @@ func Customers(customers []models.Customer, flash string) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<!-- Search Bar --><div class=\"mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm\"><div class=\"w-full sm:flex-1 sm:min-w-[200px]\"><input type=\"text\" placeholder=\"Search by name, email, or company...\" x-model=\"searchQuery\" class=\"w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\"></div><button x-show=\"searchQuery\" x-cloak @click=\"searchQuery = ''\" class=\"px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors\">Clear</button></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
 			}
 			templ_7745c5c3_Var3 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -90,7 +94,7 @@ func Customers(customers []models.Customer, flash string) templ.Component {
 						}()
 					}
 					ctx = templ.InitializeContext(ctx)
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<thead><tr class=\"bg-gray-50 border-b border-gray-200\"><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Name</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Email</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Phone</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Company</th><th class=\"px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider\">Actions</th></tr></thead> <tbody id=\"customer-list\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<thead><tr class=\"bg-gray-50 border-b border-gray-200\"><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Name</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Email</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Phone</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Company</th><th class=\"px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider\">Actions</th></tr></thead> <tbody id=\"customer-list\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -101,12 +105,12 @@ func Customers(customers []models.Customer, flash string) templ.Component {
 						}
 					}
 					if len(customers) == 0 {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<tr><td colspan=\"5\" class=\"px-6 py-16 text-center\"><div class=\"flex flex-col items-center gap-3\"><div class=\"w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center\"><svg class=\"w-6 h-6 text-gray-400\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z\"></path></svg></div><p class=\"text-sm font-medium text-gray-900\">No customers yet</p><p class=\"text-xs text-gray-400\">Add your first customer to get started.</p></div></td></tr>")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<tr><td colspan=\"5\" class=\"px-6 py-16 text-center\"><div class=\"flex flex-col items-center gap-3\"><div class=\"w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center\"><svg class=\"w-6 h-6 text-gray-400\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z\"></path></svg></div><p class=\"text-sm font-medium text-gray-900\">No customers yet</p><p class=\"text-xs text-gray-400\">Add your first customer to get started.</p></div></td></tr>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</tbody>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</tbody>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -119,6 +123,10 @@ func Customers(customers []models.Customer, flash string) templ.Component {
 				return nil
 			})
 			templ_7745c5c3_Err = components.Card("").Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = components.Pagination(components.NewPagination(currentPage, totalItems, itemsPerPage, "/customers")).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -144,7 +152,7 @@ func Customers(customers []models.Customer, flash string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</main></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<script>\nfunction customerFilter() {\n    return {\n        searchQuery: '',\n        filterRows() {\n            var rows = document.querySelectorAll('#customer-list tr[data-name]');\n            var q = this.searchQuery.toLowerCase();\n            rows.forEach(function(row) {\n                var name = row.getAttribute('data-name') || '';\n                var email = row.getAttribute('data-email') || '';\n                var company = row.getAttribute('data-company') || '';\n                var show = !q || name.indexOf(q) !== -1 || email.indexOf(q) !== -1 || company.indexOf(q) !== -1;\n                row.style.display = show ? '' : 'none';\n            });\n        },\n        init() {\n            this.$watch('searchQuery', () => this.filterRows());\n        }\n    }\n}\n\t\t\t</script></main></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

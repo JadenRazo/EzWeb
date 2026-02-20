@@ -5,6 +5,7 @@ import (
 	"ezweb/views/components"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 func paymentStatusColor(status string) string {
@@ -23,7 +24,7 @@ func paymentStatusColor(status string) string {
 }
 
 templ PaymentRow(p models.Payment) {
-	<tr id={ fmt.Sprintf("payment-%d", p.ID) } class="border-b border-gray-100 hover:bg-gray-50/80 transition-colors duration-100">
+	<tr id={ fmt.Sprintf("payment-%d", p.ID) } data-customer={ strings.ToLower(p.CustomerName) } data-status={ p.Status } data-site={ strings.ToLower(p.SiteDomain) } class="border-b border-gray-100 hover:bg-gray-50/80 transition-colors duration-100">
 		<td class="px-6 py-4 text-sm font-medium text-gray-900">{ p.CustomerName }</td>
 		<td class="px-6 py-4 text-sm text-gray-600">
 			if p.SiteDomain != "" {

@@ -41,6 +41,11 @@ templ SiteRow(site models.Site) {
 		data-server={ strings.ToLower(site.ServerName) }
 		data-customer={ strings.ToLower(site.CustomerName) }
 	>
+		<td class="px-3 py-4 w-10">
+			<input type="checkbox" name="site_ids" value={ fmt.Sprintf("%d", site.ID) } form="bulk-form"
+				@change="updateBulkCount()"
+				class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"/>
+		</td>
 		<td class="px-6 py-4">
 			<a href={ templ.SafeURL(fmt.Sprintf("/sites/%d", site.ID)) } class="font-medium text-blue-600 hover:text-blue-800 hover:underline text-sm">
 				{ site.Domain }

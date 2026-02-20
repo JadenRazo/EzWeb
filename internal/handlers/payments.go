@@ -14,7 +14,15 @@ import (
 
 func ListPayments(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		payments, err := models.GetAllPayments(db)
+		page, _ := strconv.Atoi(c.Query("page", "1"))
+		if page < 1 {
+			page = 1
+		}
+
+		total, _ := models.CountPayments(db)
+		offset := (page - 1) * perPage
+
+		payments, err := models.GetPaymentsPaginated(db, perPage, offset)
 		if err != nil {
 			log.Printf("failed to list payments: %v", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to load payments")
@@ -33,7 +41,7 @@ func ListPayments(db *sql.DB) fiber.Handler {
 		}
 
 		c.Set("Content-Type", "text/html")
-		return pages.Payments(payments, customers, sites).Render(c.Context(), c.Response().BodyWriter())
+		return pages.Payments(payments, customers, sites, page, total, perPage).Render(c.Context(), c.Response().BodyWriter())
 	}
 }
 
@@ -79,7 +87,7 @@ func CreatePayment(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to create payment")
 		}
 
-		models.LogActivity(db, "payment", p.ID, "created", "Created payment of $"+c.FormValue("amount")+" due "+dueDate)
+		models.LogActivityWithContext(db, "payment", p.ID, "created", "Created payment of $"+c.FormValue("amount")+" due "+dueDate, c.IP(), c.Get("User-Agent"))
 
 		// Reload from DB to get computed status and JOIN fields
 		payment, err := models.GetPaymentByID(db, p.ID)
@@ -172,7 +180,7 @@ func UpdatePayment(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to update payment")
 		}
 
-		models.LogActivity(db, "payment", id, "updated", "Updated payment of $"+c.FormValue("amount"))
+		models.LogActivityWithContext(db, "payment", id, "updated", "Updated payment of $"+c.FormValue("amount"), c.IP(), c.Get("User-Agent"))
 
 		payment, err := models.GetPaymentByID(db, id)
 		if err != nil {
@@ -200,7 +208,7 @@ func MarkPaid(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to mark payment as paid")
 		}
 
-		models.LogActivity(db, "payment", id, "paid", "Marked payment as paid")
+		models.LogActivityWithContext(db, "payment", id, "paid", "Marked payment as paid", c.IP(), c.Get("User-Agent"))
 
 		payment, err := models.GetPaymentByID(db, id)
 		if err != nil {
@@ -245,7 +253,7 @@ func DeletePayment(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete payment")
 		}
 
-		models.LogActivity(db, "payment", id, "deleted", "Deleted payment")
+		models.LogActivityWithContext(db, "payment", id, "deleted", "Deleted payment", c.IP(), c.Get("User-Agent"))
 
 		if c.Get("HX-Request") != "" {
 			return c.SendString("")

@@ -12,6 +12,8 @@ type Activity struct {
 	EntityID   int
 	Action     string
 	Details    string
+	IPAddress  string
+	UserAgent  string
 	CreatedAt  string
 }
 
@@ -19,6 +21,16 @@ func LogActivity(db *sql.DB, entityType string, entityID int, action string, det
 	if _, err := db.Exec(
 		"INSERT INTO activity_log (entity_type, entity_id, action, details) VALUES (?, ?, ?, ?)",
 		entityType, entityID, action, details,
+	); err != nil {
+		log.Printf("failed to log activity (%s/%d %s): %v", entityType, entityID, action, err)
+	}
+}
+
+// LogActivityWithContext logs an activity with the request's IP and user agent.
+func LogActivityWithContext(db *sql.DB, entityType string, entityID int, action string, details string, ipAddress string, userAgent string) {
+	if _, err := db.Exec(
+		"INSERT INTO activity_log (entity_type, entity_id, action, details, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)",
+		entityType, entityID, action, details, ipAddress, userAgent,
 	); err != nil {
 		log.Printf("failed to log activity (%s/%d %s): %v", entityType, entityID, action, err)
 	}
@@ -36,7 +48,7 @@ func LogActivityAt(db *sql.DB, entityType string, entityID int, action string, d
 
 func GetRecentActivities(db *sql.DB, limit int) ([]Activity, error) {
 	rows, err := db.Query(
-		"SELECT id, entity_type, COALESCE(entity_id,0), action, COALESCE(details,''), created_at FROM activity_log ORDER BY created_at DESC LIMIT ?",
+		"SELECT id, entity_type, COALESCE(entity_id,0), action, COALESCE(details,''), COALESCE(ip_address,''), COALESCE(user_agent,''), created_at FROM activity_log ORDER BY created_at DESC LIMIT ?",
 		limit,
 	)
 	if err != nil {
@@ -47,7 +59,7 @@ func GetRecentActivities(db *sql.DB, limit int) ([]Activity, error) {
 	var activities []Activity
 	for rows.Next() {
 		var a Activity
-		if err := rows.Scan(&a.ID, &a.EntityType, &a.EntityID, &a.Action, &a.Details, &a.CreatedAt); err != nil {
+		if err := rows.Scan(&a.ID, &a.EntityType, &a.EntityID, &a.Action, &a.Details, &a.IPAddress, &a.UserAgent, &a.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan activity: %w", err)
 		}
 		activities = append(activities, a)

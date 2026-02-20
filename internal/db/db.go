@@ -58,6 +58,8 @@ func migrateSchema(db *sql.DB) error {
 		"ALTER TABLE sites ADD COLUMN ssl_expiry DATETIME",
 		// Safe migration: add role column if it doesn't exist (no-op on fresh DBs)
 		"ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'admin'",
+		"ALTER TABLE activity_log ADD COLUMN ip_address TEXT",
+		"ALTER TABLE activity_log ADD COLUMN user_agent TEXT",
 	}
 	for _, stmt := range alterations {
 		if _, err := db.Exec(stmt); err != nil {

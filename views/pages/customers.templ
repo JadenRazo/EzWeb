@@ -7,11 +7,11 @@ import (
 	"ezweb/views/partials"
 )
 
-templ Customers(customers []models.Customer, flash string) {
+templ Customers(customers []models.Customer, flash string, currentPage int, totalItems int, itemsPerPage int) {
 	@layouts.Base("Customers") {
 		<div class="flex min-h-screen bg-gray-50">
 			@components.Navbar("/customers")
-			<main class="flex-1 p-8 lg:pl-8 pl-4 pt-16 lg:pt-8">
+			<main class="flex-1 p-8 lg:pl-8 pl-4 pt-16 lg:pt-8" x-data="customerFilter()">
 				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
 					<div>
 						<h2 class="text-2xl font-bold text-gray-900">Customers</h2>
@@ -30,6 +30,25 @@ templ Customers(customers []models.Customer, flash string) {
 				if flash != "" {
 					@components.Alert(flash, "success")
 				}
+				<!-- Search Bar -->
+				<div class="mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+					<div class="w-full sm:flex-1 sm:min-w-[200px]">
+						<input
+							type="text"
+							placeholder="Search by name, email, or company..."
+							x-model="searchQuery"
+							class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+						/>
+					</div>
+					<button
+						x-show="searchQuery"
+						x-cloak
+						@click="searchQuery = ''"
+						class="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+					>
+						Clear
+					</button>
+				</div>
 				@components.Card("") {
 					@components.Table() {
 						<thead>
@@ -63,9 +82,31 @@ templ Customers(customers []models.Customer, flash string) {
 						</tbody>
 					}
 				}
+				@components.Pagination(components.NewPagination(currentPage, totalItems, itemsPerPage, "/customers"))
 				@components.Modal("add-customer", "Add Customer") {
 					@partials.CustomerForm(nil)
 				}
+			<script>
+function customerFilter() {
+    return {
+        searchQuery: '',
+        filterRows() {
+            var rows = document.querySelectorAll('#customer-list tr[data-name]');
+            var q = this.searchQuery.toLowerCase();
+            rows.forEach(function(row) {
+                var name = row.getAttribute('data-name') || '';
+                var email = row.getAttribute('data-email') || '';
+                var company = row.getAttribute('data-company') || '';
+                var show = !q || name.indexOf(q) !== -1 || email.indexOf(q) !== -1 || company.indexOf(q) !== -1;
+                row.style.display = show ? '' : 'none';
+            });
+        },
+        init() {
+            this.$watch('searchQuery', () => this.filterRows());
+        }
+    }
+}
+			</script>
 			</main>
 		</div>
 	}

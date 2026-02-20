@@ -34,6 +34,9 @@ func DeploySSE(db *sql.DB) fiber.Handler {
 
 		_ = models.UpdateSiteStatus(db, id, "deploying")
 
+		clientIP := c.IP()
+		userAgent := c.Get("User-Agent")
+
 		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 			writeLine := func(msg string) {
 				fmt.Fprintf(w, "data: %s\n\n", msg)
@@ -80,7 +83,7 @@ func DeploySSE(db *sql.DB) fiber.Handler {
 			} else {
 				writeLine("Deployment completed successfully!")
 				_ = models.UpdateSiteStatus(db, id, "running")
-				models.LogActivity(db, "site", id, "deployed", "Deployed site "+site.Domain)
+				models.LogActivityWithContext(db, "site", id, "deployed", "Deployed site "+site.Domain, clientIP, userAgent)
 			}
 
 			writeLine("[DONE]")

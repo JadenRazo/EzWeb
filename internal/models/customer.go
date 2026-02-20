@@ -89,3 +89,24 @@ func CountCustomers(db *sql.DB) (int, error) {
 	}
 	return count, nil
 }
+
+func GetCustomersPaginated(db *sql.DB, limit, offset int) ([]Customer, error) {
+	rows, err := db.Query(
+		"SELECT id, name, COALESCE(email,''), COALESCE(phone,''), COALESCE(company,''), created_at, updated_at FROM customers ORDER BY id DESC LIMIT ? OFFSET ?",
+		limit, offset,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query customers: %w", err)
+	}
+	defer rows.Close()
+
+	var customers []Customer
+	for rows.Next() {
+		var c Customer
+		if err := rows.Scan(&c.ID, &c.Name, &c.Email, &c.Phone, &c.Company, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan customer: %w", err)
+		}
+		customers = append(customers, c)
+	}
+	return customers, rows.Err()
+}

@@ -71,8 +71,9 @@ func generatePassword(length int) string {
 }
 
 // DeploySite renders a compose template, uploads it to the remote server via
-// SFTP, and runs docker compose up to start the site containers.
-func DeploySite(host string, port int, user string, keyPath string, hostKey string, domain string, templateSlug string, containerName string, sitePort int) error {
+// SFTP, and runs docker compose up to start the site containers. If envContent
+// is non-empty, it is written as a .env file alongside the compose file.
+func DeploySite(host string, port int, user string, keyPath string, hostKey string, domain string, templateSlug string, containerName string, sitePort int, envContent ...string) error {
 	if err := ValidateContainerName(containerName); err != nil {
 		return err
 	}
@@ -117,6 +118,20 @@ func DeploySite(host string, port int, user string, keyPath string, hostKey stri
 		return fmt.Errorf("failed to write compose file: %w", err)
 	}
 	f.Close()
+
+	// Upload .env file if env vars are provided
+	if len(envContent) > 0 && envContent[0] != "" {
+		envFile := fmt.Sprintf("%s/.env", remotePath)
+		ef, err := sftpClient.Create(envFile)
+		if err != nil {
+			return fmt.Errorf("failed to create remote .env file: %w", err)
+		}
+		if _, err := ef.Write([]byte(envContent[0])); err != nil {
+			ef.Close()
+			return fmt.Errorf("failed to write .env file: %w", err)
+		}
+		ef.Close()
+	}
 
 	if _, err := sshutil.RunCommand(sshClient, fmt.Sprintf("cd %s && docker compose up -d", remotePath)); err != nil {
 		return fmt.Errorf("docker compose up failed for %s: %w", containerName, err)

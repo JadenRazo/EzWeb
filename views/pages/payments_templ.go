@@ -16,7 +16,7 @@ import (
 	"strconv"
 )
 
-func Payments(payments []models.Payment, customers []models.Customer, sites []models.Site) templ.Component {
+func Payments(payments []models.Payment, customers []models.Customer, sites []models.Site, currentPage int, totalItems int, itemsPerPage int) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -57,7 +57,7 @@ func Payments(payments []models.Payment, customers []models.Customer, sites []mo
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<main class=\"flex-1 p-8 lg:pl-8 pl-4 pt-16 lg:pt-8\"><div class=\"flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6\"><div><h2 class=\"text-2xl font-bold text-gray-900\">Payments</h2><p class=\"text-sm text-gray-500 mt-1\">Track invoices, due dates, and payment status</p></div><button data-modal-open=\"add-payment\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-150\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"2.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 4.5v15m7.5-7.5h-15\"></path></svg> Add Payment</button></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<main class=\"flex-1 p-8 lg:pl-8 pl-4 pt-16 lg:pt-8\" x-data=\"paymentFilter()\"><div class=\"flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6\"><div><h2 class=\"text-2xl font-bold text-gray-900\">Payments</h2><p class=\"text-sm text-gray-500 mt-1\">Track invoices, due dates, and payment status</p></div><button data-modal-open=\"add-payment\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-150\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"2.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 4.5v15m7.5-7.5h-15\"></path></svg> Add Payment</button></div><!-- Search & Filter Bar --><div class=\"mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm\"><div class=\"w-full sm:flex-1 sm:min-w-[200px]\"><input type=\"text\" placeholder=\"Search by customer or site...\" x-model=\"searchQuery\" class=\"w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\"></div><select x-model=\"statusFilter\" class=\"px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"all\">All statuses</option> <option value=\"pending\">Pending</option> <option value=\"due_soon\">Due Soon</option> <option value=\"overdue\">Overdue</option> <option value=\"paid\">Paid</option></select> <button x-show=\"searchQuery || statusFilter !== 'all'\" x-cloak @click=\"searchQuery = ''; statusFilter = 'all'\" class=\"px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors\">Clear</button></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -117,6 +117,10 @@ func Payments(payments []models.Payment, customers []models.Customer, sites []mo
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
+			templ_7745c5c3_Err = components.Pagination(components.NewPagination(currentPage, totalItems, itemsPerPage, "/payments")).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 			templ_7745c5c3_Var5 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
@@ -141,7 +145,7 @@ func Payments(payments []models.Payment, customers []models.Customer, sites []mo
 					var templ_7745c5c3_Var6 string
 					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(c.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/payments.templ`, Line: 78, Col: 43}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/payments.templ`, Line: 108, Col: 43}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 					if templ_7745c5c3_Err != nil {
@@ -154,7 +158,7 @@ func Payments(payments []models.Payment, customers []models.Customer, sites []mo
 					var templ_7745c5c3_Var7 string
 					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(c.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/payments.templ`, Line: 78, Col: 54}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/payments.templ`, Line: 108, Col: 54}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 					if templ_7745c5c3_Err != nil {
@@ -177,7 +181,7 @@ func Payments(payments []models.Payment, customers []models.Customer, sites []mo
 					var templ_7745c5c3_Var8 string
 					templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(s.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/payments.templ`, Line: 87, Col: 43}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/payments.templ`, Line: 117, Col: 43}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 					if templ_7745c5c3_Err != nil {
@@ -190,7 +194,7 @@ func Payments(payments []models.Payment, customers []models.Customer, sites []mo
 					var templ_7745c5c3_Var9 string
 					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(s.Domain)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/payments.templ`, Line: 87, Col: 56}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/payments.templ`, Line: 117, Col: 56}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
@@ -211,7 +215,7 @@ func Payments(payments []models.Payment, customers []models.Customer, sites []mo
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</main></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<script>\nfunction paymentFilter() {\n    return {\n        searchQuery: '',\n        statusFilter: 'all',\n        filterRows() {\n            var rows = document.querySelectorAll('#payment-list tr[data-customer]');\n            var q = this.searchQuery.toLowerCase();\n            var sf = this.statusFilter;\n            rows.forEach(function(row) {\n                var customer = row.getAttribute('data-customer') || '';\n                var site = row.getAttribute('data-site') || '';\n                var status = row.getAttribute('data-status') || '';\n                var show = true;\n                if (q && customer.indexOf(q) === -1 && site.indexOf(q) === -1) show = false;\n                if (sf !== 'all' && status !== sf) show = false;\n                row.style.display = show ? '' : 'none';\n            });\n        },\n        init() {\n            this.$watch('searchQuery', () => this.filterRows());\n            this.$watch('statusFilter', () => this.filterRows());\n        }\n    }\n}\n\t\t\t</script></main></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

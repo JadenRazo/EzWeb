@@ -1,0 +1,99 @@
+package components
+
+import (
+	"fmt"
+	"strconv"
+)
+
+type PaginationData struct {
+	CurrentPage int
+	TotalPages  int
+	BasePath    string
+}
+
+func NewPagination(page, totalItems, perPage int, basePath string) PaginationData {
+	totalPages := (totalItems + perPage - 1) / perPage
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	return PaginationData{
+		CurrentPage: page,
+		TotalPages:  totalPages,
+		BasePath:    basePath,
+	}
+}
+
+templ Pagination(p PaginationData) {
+	if p.TotalPages > 1 {
+		<div class="flex items-center justify-between px-4 py-3 mt-4">
+			<div class="text-sm text-gray-500">
+				Page { strconv.Itoa(p.CurrentPage) } of { strconv.Itoa(p.TotalPages) }
+			</div>
+			<div class="flex items-center gap-2">
+				if p.CurrentPage > 1 {
+					<a href={ templ.SafeURL(fmt.Sprintf("%s?page=%d", p.BasePath, p.CurrentPage-1)) }
+						class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+						Previous
+					</a>
+				}
+				for _, pg := range paginationRange(p.CurrentPage, p.TotalPages) {
+					if pg == -1 {
+						<span class="px-2 py-1.5 text-sm text-gray-400">...</span>
+					} else if pg == p.CurrentPage {
+						<span class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg">
+							{ strconv.Itoa(pg) }
+						</span>
+					} else {
+						<a href={ templ.SafeURL(fmt.Sprintf("%s?page=%d", p.BasePath, pg)) }
+							class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+							{ strconv.Itoa(pg) }
+						</a>
+					}
+				}
+				if p.CurrentPage < p.TotalPages {
+					<a href={ templ.SafeURL(fmt.Sprintf("%s?page=%d", p.BasePath, p.CurrentPage+1)) }
+						class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+						Next
+					</a>
+				}
+			</div>
+		</div>
+	}
+}
+
+func paginationRange(current, total int) []int {
+	if total <= 7 {
+		pages := make([]int, total)
+		for i := range pages {
+			pages[i] = i + 1
+		}
+		return pages
+	}
+
+	var pages []int
+	pages = append(pages, 1)
+
+	if current > 3 {
+		pages = append(pages, -1) // ellipsis
+	}
+
+	start := current - 1
+	end := current + 1
+	if start < 2 {
+		start = 2
+	}
+	if end > total-1 {
+		end = total - 1
+	}
+
+	for i := start; i <= end; i++ {
+		pages = append(pages, i)
+	}
+
+	if current < total-2 {
+		pages = append(pages, -1) // ellipsis
+	}
+
+	pages = append(pages, total)
+	return pages
+}

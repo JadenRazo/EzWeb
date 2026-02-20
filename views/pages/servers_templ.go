@@ -58,7 +58,7 @@ func Servers(localInfo docker.LocalServerInfo, servers []models.Server) templ.Co
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<main class=\"flex-1 p-6 lg:p-10 pt-16 lg:pt-10\"><div class=\"flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8\"><div><h2 class=\"text-2xl font-bold text-gray-900\">Servers</h2><p class=\"text-sm text-gray-500 mt-1\">Manage your hosting infrastructure and SSH connections</p></div><button data-modal-open=\"add-server\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-150\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"2.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 4.5v15m7.5-7.5h-15\"></path></svg> Add Server</button></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<main class=\"flex-1 p-6 lg:p-10 pt-16 lg:pt-10\" x-data=\"serverFilter()\"><div class=\"flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8\"><div><h2 class=\"text-2xl font-bold text-gray-900\">Servers</h2><p class=\"text-sm text-gray-500 mt-1\">Manage your hosting infrastructure and SSH connections</p></div><button data-modal-open=\"add-server\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-150\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"2.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 4.5v15m7.5-7.5h-15\"></path></svg> Add Server</button></div><!-- Search Bar --><div class=\"mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm\"><div class=\"w-full sm:flex-1 sm:min-w-[200px]\"><input type=\"text\" placeholder=\"Search by name or host...\" x-model=\"searchQuery\" class=\"w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\"></div><button x-show=\"searchQuery\" x-cloak @click=\"searchQuery = ''\" class=\"px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors\">Clear</button></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -138,7 +138,7 @@ func Servers(localInfo docker.LocalServerInfo, servers []models.Server) templ.Co
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</main></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</main><script>\nfunction serverFilter() {\n    return {\n        searchQuery: '',\n        filterRows() {\n            var rows = document.querySelectorAll('#server-list tr[data-name]');\n            var q = this.searchQuery.toLowerCase();\n            rows.forEach(function(row) {\n                var name = row.getAttribute('data-name') || '';\n                var host = row.getAttribute('data-host') || '';\n                var show = !q || name.indexOf(q) !== -1 || host.indexOf(q) !== -1;\n                row.style.display = show ? '' : 'none';\n            });\n        },\n        init() {\n            this.$watch('searchQuery', () => this.filterRows());\n        }\n    }\n}\n\t\t\t</script></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -176,7 +176,7 @@ func ServersCount(count int) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(count))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/servers.templ`, Line: 127, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/servers.templ`, Line: 166, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {

@@ -105,6 +105,24 @@ func GetAllSites(db *sql.DB) ([]Site, error) {
 	return sites, rows.Err()
 }
 
+func GetSitesPaginated(db *sql.DB, limit, offset int) ([]Site, error) {
+	rows, err := db.Query(`SELECT `+siteSelectColumns+siteFromJoins+` ORDER BY s.created_at DESC LIMIT ? OFFSET ?`, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query sites: %w", err)
+	}
+	defer rows.Close()
+
+	var sites []Site
+	for rows.Next() {
+		s, err := scanSite(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan site row: %w", err)
+		}
+		sites = append(sites, *s)
+	}
+	return sites, rows.Err()
+}
+
 func GetSiteByID(db *sql.DB, id int) (*Site, error) {
 	row := db.QueryRow(`SELECT `+siteSelectColumns+siteFromJoins+` WHERE s.id = ?`, id)
 	s, err := scanSite(row)

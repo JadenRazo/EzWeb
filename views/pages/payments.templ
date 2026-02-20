@@ -8,11 +8,11 @@ import (
 	"strconv"
 )
 
-templ Payments(payments []models.Payment, customers []models.Customer, sites []models.Site) {
+templ Payments(payments []models.Payment, customers []models.Customer, sites []models.Site, currentPage int, totalItems int, itemsPerPage int) {
 	@layouts.Base("Payments") {
 		<div class="flex min-h-screen bg-gray-50">
 			@components.Navbar("/payments")
-			<main class="flex-1 p-8 lg:pl-8 pl-4 pt-16 lg:pt-8">
+			<main class="flex-1 p-8 lg:pl-8 pl-4 pt-16 lg:pt-8" x-data="paymentFilter()">
 				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
 					<div>
 						<h2 class="text-2xl font-bold text-gray-900">Payments</h2>
@@ -26,6 +26,35 @@ templ Payments(payments []models.Payment, customers []models.Customer, sites []m
 							<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
 						</svg>
 						Add Payment
+					</button>
+				</div>
+				<!-- Search & Filter Bar -->
+				<div class="mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+					<div class="w-full sm:flex-1 sm:min-w-[200px]">
+						<input
+							type="text"
+							placeholder="Search by customer or site..."
+							x-model="searchQuery"
+							class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+						/>
+					</div>
+					<select
+						x-model="statusFilter"
+						class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none"
+					>
+						<option value="all">All statuses</option>
+						<option value="pending">Pending</option>
+						<option value="due_soon">Due Soon</option>
+						<option value="overdue">Overdue</option>
+						<option value="paid">Paid</option>
+					</select>
+					<button
+						x-show="searchQuery || statusFilter !== 'all'"
+						x-cloak
+						@click="searchQuery = ''; statusFilter = 'all'"
+						class="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+					>
+						Clear
 					</button>
 				</div>
 				@components.Card("") {
@@ -62,6 +91,7 @@ templ Payments(payments []models.Payment, customers []models.Customer, sites []m
 						</tbody>
 					}
 				}
+				@components.Pagination(components.NewPagination(currentPage, totalItems, itemsPerPage, "/payments"))
 				@components.Modal("add-payment", "Add Payment") {
 					<form
 						hx-post="/payments"
@@ -115,6 +145,32 @@ templ Payments(payments []models.Payment, customers []models.Customer, sites []m
 						</div>
 					</form>
 				}
+			<script>
+function paymentFilter() {
+    return {
+        searchQuery: '',
+        statusFilter: 'all',
+        filterRows() {
+            var rows = document.querySelectorAll('#payment-list tr[data-customer]');
+            var q = this.searchQuery.toLowerCase();
+            var sf = this.statusFilter;
+            rows.forEach(function(row) {
+                var customer = row.getAttribute('data-customer') || '';
+                var site = row.getAttribute('data-site') || '';
+                var status = row.getAttribute('data-status') || '';
+                var show = true;
+                if (q && customer.indexOf(q) === -1 && site.indexOf(q) === -1) show = false;
+                if (sf !== 'all' && status !== sf) show = false;
+                row.style.display = show ? '' : 'none';
+            });
+        },
+        init() {
+            this.$watch('searchQuery', () => this.filterRows());
+            this.$watch('statusFilter', () => this.filterRows());
+        }
+    }
+}
+			</script>
 			</main>
 		</div>
 	}

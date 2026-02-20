@@ -12,15 +12,25 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+const perPage = 25
+
 func ListCustomers(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		customers, err := models.GetAllCustomers(db)
+		page, _ := strconv.Atoi(c.Query("page", "1"))
+		if page < 1 {
+			page = 1
+		}
+
+		total, _ := models.CountCustomers(db)
+		offset := (page - 1) * perPage
+
+		customers, err := models.GetCustomersPaginated(db, perPage, offset)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to load customers")
 		}
 
 		c.Set("Content-Type", "text/html")
-		return pages.Customers(customers, "").Render(c.Context(), c.Response().BodyWriter())
+		return pages.Customers(customers, "", page, total, perPage).Render(c.Context(), c.Response().BodyWriter())
 	}
 }
 
@@ -47,7 +57,7 @@ func CreateCustomer(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to create customer")
 		}
 
-		models.LogActivity(db, "customer", customer.ID, "created", "Added customer "+customer.Name)
+		models.LogActivityWithContext(db, "customer", customer.ID, "created", "Added customer "+customer.Name, c.IP(), c.Get("User-Agent"))
 
 		// Reload the customer to get the full record with timestamps
 		created, err := models.GetCustomerByID(db, customer.ID)
@@ -128,7 +138,7 @@ func UpdateCustomer(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to update customer")
 		}
 
-		models.LogActivity(db, "customer", id, "updated", "Updated customer "+customer.Name)
+		models.LogActivityWithContext(db, "customer", id, "updated", "Updated customer "+customer.Name, c.IP(), c.Get("User-Agent"))
 
 		// Reload to get updated timestamps
 		updated, err := models.GetCustomerByID(db, id)
@@ -184,7 +194,7 @@ func DeleteCustomer(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete customer")
 		}
 
-		models.LogActivity(db, "customer", id, "deleted", "Deleted customer "+customer.Name)
+		models.LogActivityWithContext(db, "customer", id, "deleted", "Deleted customer "+customer.Name, c.IP(), c.Get("User-Agent"))
 
 		if c.Get("HX-Request") != "" {
 			return c.SendString("")

@@ -33,7 +33,15 @@ func validatePort(port int) bool {
 
 func ListSites(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		sites, err := models.GetAllSites(db)
+		page, _ := strconv.Atoi(c.Query("page", "1"))
+		if page < 1 {
+			page = 1
+		}
+
+		total, _ := models.CountSites(db)
+		offset := (page - 1) * perPage
+
+		sites, err := models.GetSitesPaginated(db, perPage, offset)
 		if err != nil {
 			log.Printf("failed to list sites: %v", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to load sites")
@@ -55,7 +63,7 @@ func ListSites(db *sql.DB) fiber.Handler {
 		}
 
 		c.Set("Content-Type", "text/html")
-		return pages.Sites(sites, servers, templates, customers).Render(c.Context(), c.Response().BodyWriter())
+		return pages.Sites(sites, servers, templates, customers, page, total, perPage).Render(c.Context(), c.Response().BodyWriter())
 	}
 }
 
@@ -160,7 +168,7 @@ func CreateSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 			}
 		}
 
-		models.LogActivity(db, "site", site.ID, "created", "Created site "+site.Domain)
+		models.LogActivityWithContext(db, "site", site.ID, "created", "Created site "+site.Domain, c.IP(), c.Get("User-Agent"))
 
 		created, err := models.GetSiteByID(db, site.ID)
 		if err != nil {
@@ -227,9 +235,10 @@ func DeploySite(db *sql.DB) fiber.Handler {
 				return c.Status(fiber.StatusNotFound).SendString("Assigned server not found")
 			}
 
+			envContent, _ := models.RenderEnvFile(db, id)
 			if err := docker.DeploySite(
 				server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey,
-				site.Domain, site.TemplateSlug, site.ContainerName, site.Port,
+				site.Domain, site.TemplateSlug, site.ContainerName, site.Port, envContent,
 			); err != nil {
 				log.Printf("deploy failed for site %d (%s): %v", id, site.Domain, err)
 				_ = models.UpdateSiteStatus(db, id, "error")
@@ -238,7 +247,7 @@ func DeploySite(db *sql.DB) fiber.Handler {
 		}
 
 		_ = models.UpdateSiteStatus(db, id, "running")
-		models.LogActivity(db, "site", id, "deployed", "Deployed site "+site.Domain)
+		models.LogActivityWithContext(db, "site", id, "deployed", "Deployed site "+site.Domain, c.IP(), c.Get("User-Agent"))
 
 		site, _ = models.GetSiteByID(db, id)
 		if c.Get("HX-Request") != "" {
@@ -287,7 +296,7 @@ func StartSite(db *sql.DB) fiber.Handler {
 		}
 
 		_ = models.UpdateSiteStatus(db, id, "running")
-		models.LogActivity(db, "site", id, "started", "Started site "+site.Domain)
+		models.LogActivityWithContext(db, "site", id, "started", "Started site "+site.Domain, c.IP(), c.Get("User-Agent"))
 
 		site, _ = models.GetSiteByID(db, id)
 		if c.Get("HX-Request") != "" {
@@ -336,7 +345,7 @@ func StopSite(db *sql.DB) fiber.Handler {
 		}
 
 		_ = models.UpdateSiteStatus(db, id, "stopped")
-		models.LogActivity(db, "site", id, "stopped", "Stopped site "+site.Domain)
+		models.LogActivityWithContext(db, "site", id, "stopped", "Stopped site "+site.Domain, c.IP(), c.Get("User-Agent"))
 
 		site, _ = models.GetSiteByID(db, id)
 		if c.Get("HX-Request") != "" {
@@ -385,7 +394,7 @@ func RestartSite(db *sql.DB) fiber.Handler {
 		}
 
 		_ = models.UpdateSiteStatus(db, id, "running")
-		models.LogActivity(db, "site", id, "restarted", "Restarted site "+site.Domain)
+		models.LogActivityWithContext(db, "site", id, "restarted", "Restarted site "+site.Domain, c.IP(), c.Get("User-Agent"))
 
 		site, _ = models.GetSiteByID(db, id)
 		if c.Get("HX-Request") != "" {
@@ -433,7 +442,7 @@ func DeleteSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 			log.Printf("failed to delete site %d: %v", id, err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete site")
 		}
-		models.LogActivity(db, "site", id, "deleted", "Deleted site "+domain)
+		models.LogActivityWithContext(db, "site", id, "deleted", "Deleted site "+domain, c.IP(), c.Get("User-Agent"))
 
 		// Trigger Caddy reload
 		if caddyMgr != nil {
@@ -529,7 +538,7 @@ func UpdateSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to update site")
 		}
 
-		models.LogActivity(db, "site", id, "updated", "Updated site "+domain)
+		models.LogActivityWithContext(db, "site", id, "updated", "Updated site "+domain, c.IP(), c.Get("User-Agent"))
 
 		// Trigger Caddy reload if domain, port, or routing changed
 		needsReload := domain != existing.Domain || port != existing.Port
@@ -580,4 +589,185 @@ func nextAvailablePort(db *sql.DB) (int, error) {
 		return 0, err
 	}
 	return port, nil
+}
+
+// --- Environment Variable Handlers ---
+
+func ListSiteEnvVars(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid site ID")
+		}
+
+		vars, err := models.GetEnvVarsBySiteID(db, id)
+		if err != nil {
+			log.Printf("failed to get env vars for site %d: %v", id, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to load environment variables")
+		}
+
+		if len(vars) == 0 {
+			return c.SendString("<p class='text-sm text-gray-400'>No environment variables set.</p>")
+		}
+
+		html := "<div class='space-y-2'>"
+		for _, v := range vars {
+			html += "<div class='flex items-center justify-between p-2 bg-gray-50 rounded-lg'>"
+			html += "<div class='font-mono text-sm'><span class='font-semibold text-gray-700'>" + v.Key + "</span> = <span class='text-gray-500'>" + v.Value + "</span></div>"
+			html += "<button hx-delete='/sites/" + strconv.Itoa(id) + "/env/" + strconv.Itoa(v.ID) + "' hx-target='#env-list' hx-swap='innerHTML' hx-confirm='Delete this variable?' "
+			html += "class='px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-colors'>Remove</button>"
+			html += "</div>"
+		}
+		html += "</div>"
+
+		c.Set("Content-Type", "text/html")
+		return c.SendString(html)
+	}
+}
+
+func CreateSiteEnvVar(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid site ID")
+		}
+
+		key := strings.TrimSpace(c.FormValue("key"))
+		value := c.FormValue("value")
+
+		if key == "" {
+			return c.Status(fiber.StatusBadRequest).SendString("Key is required")
+		}
+
+		// Validate key format (alphanumeric + underscores only)
+		for _, ch := range key {
+			if !((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_') {
+				return c.Status(fiber.StatusBadRequest).SendString("Key must contain only letters, numbers, and underscores")
+			}
+		}
+
+		if err := models.CreateEnvVar(db, id, key, value); err != nil {
+			log.Printf("failed to create env var for site %d: %v", id, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to save environment variable")
+		}
+
+		models.LogActivityWithContext(db, "site", id, "env_updated", "Set env var "+key, c.IP(), c.Get("User-Agent"))
+
+		if c.Get("HX-Request") != "" {
+			return c.SendString("<div class='text-sm text-green-600'>Variable saved. Redeploy to apply changes.</div>")
+		}
+		return c.Redirect("/sites/" + strconv.Itoa(id))
+	}
+}
+
+func BulkSiteAction(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		action := c.FormValue("action")
+		siteIDs := c.Request().PostArgs().PeekMulti("site_ids")
+
+		if len(siteIDs) == 0 {
+			return c.Status(fiber.StatusBadRequest).SendString("No sites selected")
+		}
+
+		var processed int
+		for _, rawID := range siteIDs {
+			id, err := strconv.Atoi(string(rawID))
+			if err != nil {
+				continue
+			}
+
+			site, err := models.GetSiteByID(db, id)
+			if err != nil {
+				continue
+			}
+
+			switch action {
+			case "start":
+				if site.IsLocal && site.ComposePath != "" {
+					ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+					err = docker.LocalComposeStart(ctx, site.ComposePath)
+					cancel()
+				} else if site.ServerID.Valid {
+					server, sErr := models.GetServerByID(db, int(site.ServerID.Int64))
+					if sErr == nil {
+						err = docker.StartSiteRemote(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey, site.ContainerName)
+					}
+				}
+				if err == nil {
+					_ = models.UpdateSiteStatus(db, id, "running")
+					models.LogActivityWithContext(db, "site", id, "started", "Bulk started site "+site.Domain, c.IP(), c.Get("User-Agent"))
+				}
+			case "stop":
+				if site.IsLocal && site.ComposePath != "" {
+					ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+					err = docker.LocalComposeStop(ctx, site.ComposePath)
+					cancel()
+				} else if site.ServerID.Valid {
+					server, sErr := models.GetServerByID(db, int(site.ServerID.Int64))
+					if sErr == nil {
+						err = docker.StopSiteRemote(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey, site.ContainerName)
+					}
+				}
+				if err == nil {
+					_ = models.UpdateSiteStatus(db, id, "stopped")
+					models.LogActivityWithContext(db, "site", id, "stopped", "Bulk stopped site "+site.Domain, c.IP(), c.Get("User-Agent"))
+				}
+			case "restart":
+				if site.IsLocal && site.ComposePath != "" {
+					ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+					err = docker.LocalComposeRestart(ctx, site.ComposePath)
+					cancel()
+				} else if site.ServerID.Valid {
+					server, sErr := models.GetServerByID(db, int(site.ServerID.Int64))
+					if sErr == nil {
+						err = docker.RestartSiteRemote(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey, site.ContainerName)
+					}
+				}
+				if err == nil {
+					_ = models.UpdateSiteStatus(db, id, "running")
+					models.LogActivityWithContext(db, "site", id, "restarted", "Bulk restarted site "+site.Domain, c.IP(), c.Get("User-Agent"))
+				}
+			default:
+				return c.Status(fiber.StatusBadRequest).SendString("Invalid action: " + action)
+			}
+
+			if err != nil {
+				log.Printf("bulk %s failed for site %d (%s): %v", action, id, site.Domain, err)
+			} else {
+				processed++
+			}
+		}
+
+		if c.Get("HX-Request") != "" {
+			c.Set("HX-Redirect", "/sites")
+			return c.SendString("")
+		}
+		return c.Redirect("/sites")
+	}
+}
+
+func DeleteSiteEnvVar(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		siteID, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid site ID")
+		}
+
+		varID, err := strconv.Atoi(c.Params("varId"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid variable ID")
+		}
+
+		if err := models.DeleteEnvVar(db, varID); err != nil {
+			log.Printf("failed to delete env var %d: %v", varID, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete variable")
+		}
+
+		models.LogActivityWithContext(db, "site", siteID, "env_deleted", "Removed env var", c.IP(), c.Get("User-Agent"))
+
+		if c.Get("HX-Request") != "" {
+			return c.SendString("")
+		}
+		return c.Redirect("/sites/" + strconv.Itoa(siteID))
+	}
 }

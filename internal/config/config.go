@@ -23,6 +23,7 @@ type Config struct {
 	WebhookFormat  string
 	AlertThreshold int
 	BackupDir      string
+	SSHKeyDir      string
 	MetricsEnabled        bool
 	HealthCheckInterval   int
 	JWTExpiryHours        int
@@ -51,11 +52,12 @@ func Load() (*Config, error) {
 		DBPath:         getEnv("DB_PATH", "./ezweb.db"),
 		CaddyfilePath:  getEnv("CADDYFILE_PATH", "/etc/caddy/Caddyfile"),
 		AcmeEmail:      getEnv("ACME_EMAIL", ""),
-		SecureCookies:  getEnv("SECURE_COOKIES", "false") == "true",
+		SecureCookies:  getEnv("SECURE_COOKIES", "true") == "true",
 		WebhookURL:     getEnv("WEBHOOK_URL", ""),
 		WebhookFormat:  getEnv("WEBHOOK_FORMAT", "discord"),
 		AlertThreshold: getEnvInt("ALERT_THRESHOLD", 3),
 		BackupDir:      getEnv("BACKUP_DIR", "./backups"),
+		SSHKeyDir:      getEnv("SSH_KEY_DIR", ""),
 		MetricsEnabled:        getEnv("METRICS_ENABLED", "false") == "true",
 		HealthCheckInterval:   getEnvInt("HEALTH_CHECK_INTERVAL", 5),
 		JWTExpiryHours:        getEnvInt("JWT_EXPIRY_HOURS", 24),
