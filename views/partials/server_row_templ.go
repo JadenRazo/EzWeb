@@ -18,7 +18,7 @@ import (
 
 func serverStatusColor(status string) string {
 	switch status {
-	case "online":
+	case "online", "active":
 		return "green"
 	case "offline":
 		return "red"
