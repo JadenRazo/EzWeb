@@ -152,17 +152,16 @@ document.addEventListener('htmx:sendError', function() {
         hideOverlay();
     }
 
-    // Show or hide based on snooze state — runs on load and after HTMX swaps
-    function applyOverlayState() {
-        if (isSnoozed()) {
-            hideOverlay();
-        } else {
-            showOverlay();
-        }
+    // Show only once per fresh browser session (new tab / window), not on every page change
+    function showOncePerSession() {
+        if (sessionStorage.getItem('shortcuts-shown')) return;
+        if (isSnoozed()) return;
+        sessionStorage.setItem('shortcuts-shown', '1');
+        showOverlay();
     }
 
-    applyOverlayState();
-    document.addEventListener('htmx:afterSettle', applyOverlayState);
+    // On initial page load, maybe show the overlay
+    showOncePerSession();
 
     // Backdrop click — close only when clicking the overlay itself, not the panel
     document.addEventListener('click', function(e) {
