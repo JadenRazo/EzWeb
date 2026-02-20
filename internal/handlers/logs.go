@@ -21,12 +21,12 @@ func GetSiteLogs(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id, err := strconv.Atoi(c.Params("id"))
 		if err != nil {
-			return c.Status(400).SendString("Invalid site ID")
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid site ID")
 		}
 
 		site, err := models.GetSiteByID(db, id)
 		if err != nil {
-			return c.Status(404).SendString("Site not found")
+			return c.Status(fiber.StatusNotFound).SendString("Site not found")
 		}
 
 		lines := c.QueryInt("lines", 200)
@@ -47,33 +47,33 @@ func GetSiteLogs(db *sql.DB) fiber.Handler {
 			output, err = docker.LocalComposeLogs(ctx, site.ComposePath, lines)
 			if err != nil {
 				log.Printf("failed to get local logs for site %d: %v", id, err)
-				return c.Status(500).SendString("Failed to get logs")
+				return c.Status(fiber.StatusInternalServerError).SendString("Failed to get logs")
 			}
 		} else {
 			if !site.ServerID.Valid {
-				return c.Status(400).SendString("Site has no server assigned")
+				return c.Status(fiber.StatusBadRequest).SendString("Site has no server assigned")
 			}
 
 			server, err := models.GetServerByID(db, int(site.ServerID.Int64))
 			if err != nil {
-				return c.Status(500).SendString("Failed to get server")
+				return c.Status(fiber.StatusInternalServerError).SendString("Failed to get server")
 			}
 
 			client, err := sshutil.NewClientWithHostKey(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey)
 			if err != nil {
 				log.Printf("SSH connection failed for site %d: %v", id, err)
-				return c.Status(500).SendString("SSH connection failed")
+				return c.Status(fiber.StatusInternalServerError).SendString("SSH connection failed")
 			}
 			defer client.Close()
 
 			if err := docker.ValidateContainerName(site.ContainerName); err != nil {
-				return c.Status(400).SendString("Invalid container name")
+				return c.Status(fiber.StatusBadRequest).SendString("Invalid container name")
 			}
 
 			output, err = sshutil.RunCommand(client, fmt.Sprintf("cd /opt/ezweb/%s && docker compose logs --tail %d 2>&1", site.ContainerName, lines))
 			if err != nil {
 				log.Printf("failed to get remote logs for site %d: %v", id, err)
-				return c.Status(500).SendString("Failed to get logs")
+				return c.Status(fiber.StatusInternalServerError).SendString("Failed to get logs")
 			}
 		}
 
@@ -97,12 +97,12 @@ func GetSiteHealth(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id, err := strconv.Atoi(c.Params("id"))
 		if err != nil {
-			return c.Status(400).SendString("Invalid site ID")
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid site ID")
 		}
 
 		checks, err := models.GetHealthChecksBySiteID(db, id, 20)
 		if err != nil {
-			return c.Status(500).SendString("Failed to get health checks")
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to get health checks")
 		}
 
 		c.Set("Content-Type", "text/html")

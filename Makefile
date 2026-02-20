@@ -1,4 +1,4 @@
-.PHONY: run build templ-gen clean prod-build build-mcp test lint docker docker-run
+.PHONY: run build templ-gen clean prod-build build-mcp test lint fmt docker docker-run
 
 run: templ-gen
 	go run ./cmd/ezweb
@@ -24,6 +24,9 @@ test:
 lint:
 	go vet ./...
 	@which staticcheck > /dev/null 2>&1 && staticcheck ./... || echo "staticcheck not installed, skipping"
+
+fmt:
+	gofmt -w .
 
 docker: templ-gen
 	docker build -t ezweb .

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"html"
 	"log"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -30,6 +31,27 @@ func validateDomain(domain string) bool {
 
 func validatePort(port int) bool {
 	return port >= 1024 && port <= 65535
+}
+
+// validateComposePath checks that a compose path is absolute, clean, and
+// contains no path traversal components.
+func validateComposePath(p string) bool {
+	if p == "" {
+		return true
+	}
+	if !filepath.IsAbs(p) {
+		return false
+	}
+	cleaned := filepath.Clean(p)
+	if cleaned != p {
+		return false
+	}
+	for _, part := range strings.Split(cleaned, string(filepath.Separator)) {
+		if part == ".." {
+			return false
+		}
+	}
+	return true
 }
 
 func ListSites(db *sql.DB) fiber.Handler {
@@ -103,6 +125,10 @@ func CreateSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 		templateSlug := c.FormValue("template_slug")
 		composePath := strings.TrimSpace(c.FormValue("compose_path"))
 		isLocal := c.FormValue("is_local") == "1" || c.FormValue("is_local") == "on"
+
+		if !validateComposePath(composePath) {
+			return c.Status(fiber.StatusBadRequest).SendString("Compose path must be an absolute path with no traversal")
+		}
 
 		// Template is required only for non-imported sites (no compose_path)
 		if templateSlug == "" && composePath == "" {
@@ -432,16 +458,14 @@ func DeleteSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 
 		domain := site.Domain
 
-		// Remove health check history before deleting the site — health checks
-		// are meaningless without their associated site.
-		if _, err := db.Exec("DELETE FROM health_checks WHERE site_id = ?", id); err != nil {
-			log.Printf("failed to remove health checks for site %d: %v", id, err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Failed to remove site health checks")
-		}
-
 		if err := models.DeleteSite(db, id); err != nil {
 			log.Printf("failed to delete site %d: %v", id, err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete site")
+		}
+
+		// Clean up orphaned activity_log entries (no FK cascade for activity_log).
+		if _, err := db.Exec("DELETE FROM activity_log WHERE entity_type = 'site' AND entity_id = ?", id); err != nil {
+			log.Printf("failed to clean activity log for site %d: %v", id, err)
 		}
 		models.LogActivityWithContext(db, "site", id, "deleted", "Deleted site "+domain, c.IP(), c.Get("User-Agent"))
 
@@ -475,6 +499,9 @@ func UpdateSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 		if domain == "" {
 			domain = existing.Domain
 		}
+		if !validateDomain(domain) {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid domain format")
+		}
 
 		templateSlug := c.FormValue("template_slug")
 		if templateSlug == "" {
@@ -485,10 +512,16 @@ func UpdateSite(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
 		if containerName == "" {
 			containerName = existing.ContainerName
 		}
+		if err := docker.ValidateContainerName(containerName); err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid container name: " + err.Error())
+		}
 
 		composePath := strings.TrimSpace(c.FormValue("compose_path"))
 		if composePath == "" {
 			composePath = existing.ComposePath
+		}
+		if !validateComposePath(composePath) {
+			return c.Status(fiber.StatusBadRequest).SendString("Compose path must be an absolute path with no traversal")
 		}
 
 		port, err := strconv.Atoi(c.FormValue("port", strconv.Itoa(existing.Port)))
@@ -759,7 +792,7 @@ func DeleteSiteEnvVar(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).SendString("Invalid variable ID")
 		}
 
-		if err := models.DeleteEnvVar(db, varID); err != nil {
+		if err := models.DeleteEnvVar(db, varID, siteID); err != nil {
 			log.Printf("failed to delete env var %d: %v", varID, err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete variable")
 		}

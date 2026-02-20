@@ -17,15 +17,6 @@ type Activity struct {
 	CreatedAt  string
 }
 
-func LogActivity(db *sql.DB, entityType string, entityID int, action string, details string) {
-	if _, err := db.Exec(
-		"INSERT INTO activity_log (entity_type, entity_id, action, details) VALUES (?, ?, ?, ?)",
-		entityType, entityID, action, details,
-	); err != nil {
-		log.Printf("failed to log activity (%s/%d %s): %v", entityType, entityID, action, err)
-	}
-}
-
 // LogActivityWithContext logs an activity with the request's IP and user agent.
 func LogActivityWithContext(db *sql.DB, entityType string, entityID int, action string, details string, ipAddress string, userAgent string) {
 	if _, err := db.Exec(

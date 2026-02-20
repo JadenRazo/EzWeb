@@ -57,6 +57,34 @@ func GetHealthChecksBySiteID(db *sql.DB, siteID int, limit int) ([]HealthCheck, 
 	return checks, rows.Err()
 }
 
+// GetLatestHealthChecks returns the most recent health check for each site in a
+// single query, keyed by site_id.
+func GetLatestHealthChecks(db *sql.DB) (map[int]*HealthCheck, error) {
+	rows, err := db.Query(
+		`SELECT hc.id, hc.site_id, COALESCE(hc.http_status,0), COALESCE(hc.latency_ms,0),
+		        COALESCE(hc.container_status,''), hc.checked_at
+		 FROM health_checks hc
+		 INNER JOIN (
+		     SELECT site_id, MAX(checked_at) AS max_checked
+		     FROM health_checks GROUP BY site_id
+		 ) latest ON hc.site_id = latest.site_id AND hc.checked_at = latest.max_checked`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query latest health checks: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[int]*HealthCheck)
+	for rows.Next() {
+		var hc HealthCheck
+		if err := rows.Scan(&hc.ID, &hc.SiteID, &hc.HTTPStatus, &hc.LatencyMs, &hc.ContainerStatus, &hc.CheckedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan health check row: %w", err)
+		}
+		result[hc.SiteID] = &hc
+	}
+	return result, rows.Err()
+}
+
 func GetLatestHealthCheck(db *sql.DB, siteID int) (*HealthCheck, error) {
 	hc := &HealthCheck{}
 	err := db.QueryRow(

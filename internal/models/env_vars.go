@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 type EnvVar struct {
@@ -45,10 +46,17 @@ func CreateEnvVar(db *sql.DB, siteID int, key, value string) error {
 	return nil
 }
 
-func DeleteEnvVar(db *sql.DB, id int) error {
-	_, err := db.Exec("DELETE FROM site_env_vars WHERE id = ?", id)
+func DeleteEnvVar(db *sql.DB, id int, siteID int) error {
+	result, err := db.Exec("DELETE FROM site_env_vars WHERE id = ? AND site_id = ?", id, siteID)
 	if err != nil {
 		return fmt.Errorf("failed to delete env var: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check delete result: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("env var not found or does not belong to this site")
 	}
 	return nil
 }
@@ -64,7 +72,11 @@ func RenderEnvFile(db *sql.DB, siteID int) (string, error) {
 	}
 	var content string
 	for _, v := range vars {
-		content += v.Key + "=" + v.Value + "\n"
+		val := v.Value
+		if strings.ContainsAny(val, " \t\n\r\"'\\=$#!`") {
+			val = "\"" + strings.ReplaceAll(strings.ReplaceAll(val, "\\", "\\\\"), "\"", "\\\"") + "\""
+		}
+		content += v.Key + "=" + val + "\n"
 	}
 	return content, nil
 }

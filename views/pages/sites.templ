@@ -1,11 +1,13 @@
 package pages
 
 import (
+	"net/url"
+	"strconv"
+
 	"ezweb/internal/models"
 	"ezweb/views/components"
 	"ezweb/views/layouts"
 	"ezweb/views/partials"
-	"strconv"
 )
 
 templ siteHelpGuide() {
@@ -37,11 +39,11 @@ func sitePaginationPath(searchQuery, statusFilter string) string {
 	base := "/sites"
 	sep := "?"
 	if searchQuery != "" {
-		base += sep + "q=" + searchQuery
+		base += sep + "q=" + url.QueryEscape(searchQuery)
 		sep = "&"
 	}
 	if statusFilter != "" {
-		base += sep + "status=" + statusFilter
+		base += sep + "status=" + url.QueryEscape(statusFilter)
 		sep = "&"
 	}
 	return base
@@ -267,7 +269,7 @@ templ Sites(sites []models.Site, servers []models.Server, templates []models.Sit
 							</div>
 						</div>
 						<div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
-							<button type="submit" formmethod="dialog" formnovalidate
+							<button type="button" onclick="EzModal.close()"
 								class="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">
 								Cancel
 							</button>

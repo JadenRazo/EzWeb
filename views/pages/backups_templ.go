@@ -78,7 +78,7 @@ func Backups(backups []backup.BackupInfo) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</p></div><div class=\"flex gap-2\"><button hx-post=\"/backups/database\" hx-swap=\"none\" class=\"px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors\">Backup Database</button> <button hx-post=\"/backups/full\" hx-swap=\"none\" class=\"px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition-colors\">Full Backup</button></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</p></div><div class=\"flex gap-2 items-center\"><button hx-post=\"/backups/database\" hx-swap=\"none\" hx-indicator=\"#backup-spinner\" hx-disabled-elt=\"this\" class=\"px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50\">Backup Database</button> <button hx-post=\"/backups/full\" hx-swap=\"none\" hx-indicator=\"#backup-spinner\" hx-disabled-elt=\"this\" class=\"px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition-colors disabled:opacity-50\">Full Backup</button> <span id=\"backup-spinner\" class=\"htmx-indicator\"><svg class=\"animate-spin h-5 w-5 text-gray-500\" xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\"><circle class=\"opacity-25\" cx=\"12\" cy=\"12\" r=\"10\" stroke=\"currentColor\" stroke-width=\"4\"></circle> <path class=\"opacity-75\" fill=\"currentColor\" d=\"M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z\"></path></svg></span></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -100,7 +100,7 @@ func Backups(backups []backup.BackupInfo) templ.Component {
 					var templ_7745c5c3_Var4 string
 					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs("backup-" + b.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 71, Col: 80}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 81, Col: 80}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
@@ -113,7 +113,7 @@ func Backups(backups []backup.BackupInfo) templ.Component {
 					var templ_7745c5c3_Var5 string
 					templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(b.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 72, Col: 59}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 82, Col: 59}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 					if templ_7745c5c3_Err != nil {
@@ -141,7 +141,7 @@ func Backups(backups []backup.BackupInfo) templ.Component {
 					var templ_7745c5c3_Var6 string
 					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(formatBackupSize(b.Size))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 80, Col: 73}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 90, Col: 73}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 					if templ_7745c5c3_Err != nil {
@@ -154,7 +154,7 @@ func Backups(backups []backup.BackupInfo) templ.Component {
 					var templ_7745c5c3_Var7 string
 					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(formatBackupTime(b))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 81, Col: 68}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 91, Col: 68}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 					if templ_7745c5c3_Err != nil {
@@ -167,7 +167,7 @@ func Backups(backups []backup.BackupInfo) templ.Component {
 					var templ_7745c5c3_Var8 templ.SafeURL
 					templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/backups/" + b.Name + "/download"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 85, Col: 70}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 95, Col: 70}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 					if templ_7745c5c3_Err != nil {
@@ -185,7 +185,7 @@ func Backups(backups []backup.BackupInfo) templ.Component {
 						var templ_7745c5c3_Var9 string
 						templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs("/backups/" + b.Name + "/restore")
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 92, Col: 58}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 102, Col: 58}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 						if templ_7745c5c3_Err != nil {
@@ -203,7 +203,7 @@ func Backups(backups []backup.BackupInfo) templ.Component {
 					var templ_7745c5c3_Var10 string
 					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs("/backups/" + b.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 101, Col: 46}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 111, Col: 46}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
@@ -216,7 +216,7 @@ func Backups(backups []backup.BackupInfo) templ.Component {
 					var templ_7745c5c3_Var11 string
 					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs("#backup-" + b.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 102, Col: 45}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/backups.templ`, Line: 112, Col: 45}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 					if templ_7745c5c3_Err != nil {

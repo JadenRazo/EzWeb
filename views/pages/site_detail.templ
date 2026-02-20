@@ -411,7 +411,7 @@ templ SiteDetailPage(site models.Site, servers []models.Server, templates []mode
 							</div>
 						</div>
 						<div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
-							<button type="submit" formmethod="dialog" formnovalidate
+							<button type="button" onclick="EzModal.close()"
 								class="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">
 								Cancel
 							</button>

@@ -4,7 +4,15 @@ set -euo pipefail
 INSTALL_DIR="/opt/ezweb"
 SERVICE_USER="ezweb"
 
+UPGRADE=false
+if [ -f "$INSTALL_DIR/ezweb" ] && systemctl is-active --quiet ezweb 2>/dev/null; then
+    UPGRADE=true
+fi
+
 echo "=== EzWeb Installer ==="
+if [ "$UPGRADE" = true ]; then
+    echo "Existing installation detected — running upgrade."
+fi
 echo ""
 
 # Check if running as root
@@ -32,6 +40,12 @@ fi
 # Create directories
 echo "Setting up directories..."
 mkdir -p "$INSTALL_DIR"/{backups,data}
+
+# Stop service before upgrading binary
+if [ "$UPGRADE" = true ]; then
+    echo "Stopping ezweb service for upgrade..."
+    systemctl stop ezweb
+fi
 
 # Copy binary if present
 if [ -f "./ezweb" ]; then
@@ -84,11 +98,21 @@ if [ -d "/etc/systemd/system" ]; then
     echo "  systemctl enable --now ezweb-backup.timer"
 fi
 
-echo ""
-echo "=== Installation complete ==="
-echo ""
-echo "Next steps:"
-echo "  1. Edit $INSTALL_DIR/.env (set a strong ADMIN_PASS)"
-echo "  2. Start the service: systemctl start ezweb"
-echo "  3. Access the dashboard at http://localhost:3000"
+# Restart service after upgrade
+if [ "$UPGRADE" = true ]; then
+    echo "Restarting ezweb service..."
+    systemctl start ezweb
+    echo ""
+    echo "=== Upgrade complete ==="
+    echo ""
+    echo "Service restarted. Schema migrations run automatically on startup."
+else
+    echo ""
+    echo "=== Installation complete ==="
+    echo ""
+    echo "Next steps:"
+    echo "  1. Edit $INSTALL_DIR/.env (set a strong ADMIN_PASS)"
+    echo "  2. Start the service: systemctl start ezweb"
+    echo "  3. Access the dashboard at http://localhost:3000"
+fi
 echo ""

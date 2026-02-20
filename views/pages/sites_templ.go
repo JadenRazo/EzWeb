@@ -9,11 +9,13 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"net/url"
+	"strconv"
+
 	"ezweb/internal/models"
 	"ezweb/views/components"
 	"ezweb/views/layouts"
 	"ezweb/views/partials"
-	"strconv"
 )
 
 func siteHelpGuide() templ.Component {
@@ -52,11 +54,11 @@ func sitePaginationPath(searchQuery, statusFilter string) string {
 	base := "/sites"
 	sep := "?"
 	if searchQuery != "" {
-		base += sep + "q=" + searchQuery
+		base += sep + "q=" + url.QueryEscape(searchQuery)
 		sep = "&"
 	}
 	if statusFilter != "" {
-		base += sep + "status=" + statusFilter
+		base += sep + "status=" + url.QueryEscape(statusFilter)
 		sep = "&"
 	}
 	return base
@@ -115,7 +117,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(totalItems))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 61, Col: 79}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 63, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -133,7 +135,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(searchQuery)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 91, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 93, Col: 26}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -324,7 +326,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 					var templ_7745c5c3_Var9 string
 					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(t.Slug)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 231, Col: 31}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 233, Col: 31}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
@@ -337,7 +339,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 					var templ_7745c5c3_Var10 string
 					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(t.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 231, Col: 43}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 233, Col: 43}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
@@ -360,7 +362,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 					var templ_7745c5c3_Var11 string
 					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(srv.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 241, Col: 45}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 243, Col: 45}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 					if templ_7745c5c3_Err != nil {
@@ -373,7 +375,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 					var templ_7745c5c3_Var12 string
 					templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 241, Col: 58}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 243, Col: 58}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 					if templ_7745c5c3_Err != nil {
@@ -386,7 +388,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 					var templ_7745c5c3_Var13 string
 					templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Host)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 241, Col: 72}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 243, Col: 72}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 					if templ_7745c5c3_Err != nil {
@@ -409,7 +411,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 					var templ_7745c5c3_Var14 string
 					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(cust.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 251, Col: 46}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 253, Col: 46}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 					if templ_7745c5c3_Err != nil {
@@ -422,7 +424,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 					var templ_7745c5c3_Var15 string
 					templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(cust.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 251, Col: 60}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 253, Col: 60}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 					if templ_7745c5c3_Err != nil {
@@ -433,7 +435,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</select></div><div class=\"grid grid-cols-1 sm:grid-cols-2 gap-4\"><div><label for=\"container_name\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Container Name</label> <input type=\"text\" id=\"container_name\" name=\"container_name\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-generated\"></div><div><label for=\"port\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Port</label> <input type=\"number\" id=\"port\" name=\"port\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-assigned\"></div></div><div class=\"flex justify-end gap-3 pt-2 border-t border-gray-100\"><button type=\"submit\" formmethod=\"dialog\" formnovalidate class=\"px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors\">Cancel</button> <button type=\"submit\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150\">Add Site</button></div></form>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</select></div><div class=\"grid grid-cols-1 sm:grid-cols-2 gap-4\"><div><label for=\"container_name\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Container Name</label> <input type=\"text\" id=\"container_name\" name=\"container_name\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-generated\"></div><div><label for=\"port\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Port</label> <input type=\"number\" id=\"port\" name=\"port\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-assigned\"></div></div><div class=\"flex justify-end gap-3 pt-2 border-t border-gray-100\"><button type=\"button\" onclick=\"EzModal.close()\" class=\"px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors\">Cancel</button> <button type=\"submit\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150\">Add Site</button></div></form>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -534,7 +536,7 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 					var templ_7745c5c3_Var19 string
 					templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(t.Slug)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 321, Col: 31}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 323, Col: 31}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 					if templ_7745c5c3_Err != nil {
@@ -547,7 +549,7 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 					var templ_7745c5c3_Var20 string
 					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(t.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 321, Col: 43}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 323, Col: 43}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 					if templ_7745c5c3_Err != nil {
@@ -560,7 +562,7 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 					var templ_7745c5c3_Var21 string
 					templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(t.Description)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 321, Col: 63}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 323, Col: 63}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 					if templ_7745c5c3_Err != nil {
@@ -583,7 +585,7 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 					var templ_7745c5c3_Var22 string
 					templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(srv.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 331, Col: 45}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 333, Col: 45}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 					if templ_7745c5c3_Err != nil {
@@ -596,7 +598,7 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 					var templ_7745c5c3_Var23 string
 					templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 331, Col: 58}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 333, Col: 58}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 					if templ_7745c5c3_Err != nil {
@@ -609,7 +611,7 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 					var templ_7745c5c3_Var24 string
 					templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Host)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 331, Col: 72}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 333, Col: 72}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 					if templ_7745c5c3_Err != nil {
@@ -632,7 +634,7 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 					var templ_7745c5c3_Var25 string
 					templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(cust.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 341, Col: 46}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 343, Col: 46}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 					if templ_7745c5c3_Err != nil {
@@ -645,7 +647,7 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 					var templ_7745c5c3_Var26 string
 					templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(cust.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 341, Col: 60}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 343, Col: 60}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 					if templ_7745c5c3_Err != nil {

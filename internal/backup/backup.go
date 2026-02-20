@@ -31,13 +31,15 @@ type Manager struct {
 	maxAge    time.Duration
 }
 
-func NewManager(backupDir string, db *sql.DB) *Manager {
-	os.MkdirAll(backupDir, 0750)
+func NewManager(backupDir string, db *sql.DB) (*Manager, error) {
+	if err := os.MkdirAll(backupDir, 0750); err != nil {
+		return nil, fmt.Errorf("failed to create backup directory: %w", err)
+	}
 	return &Manager{
 		backupDir: backupDir,
 		db:        db,
 		maxAge:    30 * 24 * time.Hour, // 30 days retention
-	}
+	}, nil
 }
 
 // BackupDatabase creates a gzip-compressed copy of the SQLite database.
@@ -78,11 +80,14 @@ func (m *Manager) BackupDatabase(dbPath string) (*BackupInfo, error) {
 	}
 	gz.Close()
 
-	info, _ := os.Stat(outPath)
+	var size int64
+	if info, err := os.Stat(outPath); err == nil {
+		size = info.Size()
+	}
 	return &BackupInfo{
 		Name:      name,
 		Path:      outPath,
-		Size:      info.Size(),
+		Size:      size,
 		CreatedAt: time.Now(),
 		Type:      "database",
 	}, nil
@@ -112,11 +117,14 @@ func (m *Manager) BackupSite(site models.Site) (*BackupInfo, error) {
 		return nil, fmt.Errorf("tar failed: %s: %w", string(out), err)
 	}
 
-	info, _ := os.Stat(outPath)
+	var size int64
+	if info, err := os.Stat(outPath); err == nil {
+		size = info.Size()
+	}
 	return &BackupInfo{
 		Name:      name,
 		Path:      outPath,
-		Size:      info.Size(),
+		Size:      size,
 		CreatedAt: time.Now(),
 		Type:      "site",
 		SiteName:  site.Domain,
@@ -183,6 +191,11 @@ func (m *Manager) RestoreDatabase(backupName, dbPath string) error {
 	// Only allow restoring database backups
 	if !strings.HasPrefix(backupName, "ezweb-db-") {
 		return fmt.Errorf("can only restore database backups")
+	}
+
+	// Flush WAL to main DB file before creating the safety backup.
+	if _, err := m.db.Exec("PRAGMA wal_checkpoint(TRUNCATE)"); err != nil {
+		log.Printf("wal_checkpoint before restore failed (non-fatal): %v", err)
 	}
 
 	// Create a safety backup of the current database before overwriting

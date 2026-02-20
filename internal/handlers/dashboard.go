@@ -17,22 +17,33 @@ func Dashboard(db *sql.DB) fiber.Handler {
 		var runningCount, stoppedCount, errorCount int
 		var serversOnline, serversOffline, serversUnknown int
 
-		scanCount := func(query string, dest *int) {
-			if err := db.QueryRow(query).Scan(dest); err != nil {
-				log.Printf("dashboard query failed (%s): %v", query, err)
-			}
+		// Aggregate site counts in a single query.
+		if err := db.QueryRow(`SELECT
+			COUNT(*),
+			SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END),
+			SUM(CASE WHEN status = 'stopped' THEN 1 ELSE 0 END),
+			SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END)
+			FROM sites`).Scan(&siteCount, &runningCount, &stoppedCount, &errorCount); err != nil {
+			log.Printf("dashboard sites query failed: %v", err)
 		}
 
-		scanCount("SELECT COUNT(*) FROM customers", &customerCount)
-		scanCount("SELECT COUNT(*) FROM sites", &siteCount)
-		scanCount("SELECT COUNT(*) FROM servers", &serverCount)
-		scanCount("SELECT COUNT(*) FROM payments WHERE paid_at IS NULL AND due_date < date('now')", &overdueCount)
-		scanCount("SELECT COUNT(*) FROM sites WHERE status = 'running'", &runningCount)
-		scanCount("SELECT COUNT(*) FROM sites WHERE status = 'stopped'", &stoppedCount)
-		scanCount("SELECT COUNT(*) FROM sites WHERE status = 'error'", &errorCount)
-		scanCount("SELECT COUNT(*) FROM servers WHERE status IN ('online','active')", &serversOnline)
-		scanCount("SELECT COUNT(*) FROM servers WHERE status = 'offline'", &serversOffline)
-		scanCount("SELECT COUNT(*) FROM servers WHERE status NOT IN ('online','active','offline')", &serversUnknown)
+		// Aggregate server counts in a single query.
+		if err := db.QueryRow(`SELECT
+			COUNT(*),
+			SUM(CASE WHEN status IN ('online','active') THEN 1 ELSE 0 END),
+			SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END),
+			SUM(CASE WHEN status NOT IN ('online','active','offline') THEN 1 ELSE 0 END)
+			FROM servers`).Scan(&serverCount, &serversOnline, &serversOffline, &serversUnknown); err != nil {
+			log.Printf("dashboard servers query failed: %v", err)
+		}
+
+		// Customer and overdue payment counts.
+		if err := db.QueryRow("SELECT COUNT(*) FROM customers").Scan(&customerCount); err != nil {
+			log.Printf("dashboard customer count failed: %v", err)
+		}
+		if err := db.QueryRow("SELECT COUNT(*) FROM payments WHERE paid_at IS NULL AND due_date < date('now')").Scan(&overdueCount); err != nil {
+			log.Printf("dashboard overdue count failed: %v", err)
+		}
 
 		activities, err := models.GetRecentActivities(db, 10)
 		if err != nil {

@@ -39,6 +39,13 @@ func PublicStatus(db *sql.DB, domainFilter string) fiber.Handler {
 			CheckedAt       string `json:"checked_at"`
 		}
 
+		// Batch-fetch latest health checks to avoid N+1 queries.
+		healthMap, err := models.GetLatestHealthChecks(db)
+		if err != nil {
+			log.Printf("failed to batch-load health checks: %v", err)
+			healthMap = make(map[int]*models.HealthCheck)
+		}
+
 		result := make([]statusJSON, 0, len(sites))
 		hidden := 0
 		for _, site := range sites {
@@ -56,8 +63,7 @@ func PublicStatus(db *sql.DB, domainFilter string) fiber.Handler {
 				Template: site.TemplateSlug,
 			}
 
-			hc, err := models.GetLatestHealthCheck(db, site.ID)
-			if err == nil {
+			if hc, ok := healthMap[site.ID]; ok {
 				entry.HTTPStatus = hc.HTTPStatus
 				entry.LatencyMs = hc.LatencyMs
 				entry.ContainerStatus = hc.ContainerStatus

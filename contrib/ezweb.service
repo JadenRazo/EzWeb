@@ -28,7 +28,7 @@ ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectControlGroups=yes
 RestrictSUIDSGID=yes
-MemoryDenyWriteExecute=yes
+MemoryDenyWriteExecute=no
 RestrictNamespaces=yes
 
 # Resource limits

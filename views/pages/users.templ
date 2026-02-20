@@ -217,7 +217,7 @@ templ Users(users []models.User, currentUsername string) {
 						<div class="flex justify-end gap-3 pt-2">
 							<button
 								type="button"
-								onclick="document.getElementById('modal-add-user').close()"
+								onclick="this.closest('dialog').close()"
 								class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
 							>
 								Cancel

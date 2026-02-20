@@ -26,8 +26,14 @@ func Open(dbPath string, maxOpenConns, maxIdleConns int) (*sql.DB, error) {
 	}
 
 	// Wait up to 5s for locks instead of failing immediately with SQLITE_BUSY
-	db.Exec("PRAGMA busy_timeout = 5000")
-	db.Exec("PRAGMA foreign_keys = ON")
+	if _, err := db.Exec("PRAGMA busy_timeout = 5000"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to set busy_timeout: %w", err)
+	}
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
+	}
 
 	// Connection pool tuning for SQLite
 	db.SetMaxOpenConns(maxOpenConns)

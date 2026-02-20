@@ -207,15 +207,26 @@ func DeleteServerHandler(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusNotFound).SendString("Server not found")
 		}
 
-		// Detach sites from this server so they retain their configuration but
-		// are no longer associated with a now-deleted server.
-		if _, err := db.Exec("UPDATE sites SET server_id = NULL WHERE server_id = ?", id); err != nil {
+		// Wrap detach + delete in a transaction so we don't leave orphaned references.
+		tx, err := db.Begin()
+		if err != nil {
+			log.Printf("failed to begin transaction for server delete %d: %v", id, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete server")
+		}
+		defer tx.Rollback() //nolint:errcheck
+
+		if _, err := tx.Exec("UPDATE sites SET server_id = NULL WHERE server_id = ?", id); err != nil {
 			log.Printf("failed to detach sites from server %d: %v", id, err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to detach server sites")
 		}
 
-		if err := models.DeleteServer(db, id); err != nil {
+		if _, err := tx.Exec("DELETE FROM servers WHERE id = ?", id); err != nil {
 			log.Printf("failed to delete server %d: %v", id, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete server")
+		}
+
+		if err := tx.Commit(); err != nil {
+			log.Printf("failed to commit server delete %d: %v", id, err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete server")
 		}
 
