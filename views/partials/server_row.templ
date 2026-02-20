@@ -8,6 +8,15 @@ import (
 	"strings"
 )
 
+func serverStatusLabel(status string) string {
+	switch status {
+	case "active":
+		return "online"
+	default:
+		return status
+	}
+}
+
 func serverStatusColor(status string) string {
 	switch status {
 	case "online", "active":
@@ -26,7 +35,7 @@ templ ServerRow(server models.Server) {
 		<td class="px-6 py-4 text-sm text-gray-600">{ strconv.Itoa(server.SSHPort) }</td>
 		<td class="px-6 py-4 text-sm text-gray-600">{ server.SSHUser }</td>
 		<td class="px-6 py-4">
-			@components.Badge(server.Status, serverStatusColor(server.Status))
+			@components.Badge(serverStatusLabel(server.Status), serverStatusColor(server.Status))
 		</td>
 		<td class="px-6 py-4">
 			<div class="flex items-center gap-1.5">
