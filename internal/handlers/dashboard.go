@@ -15,6 +15,7 @@ func Dashboard(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var customerCount, siteCount, serverCount, overdueCount int
 		var runningCount, stoppedCount, errorCount int
+		var serversOnline, serversOffline, serversUnknown int
 
 		scanCount := func(query string, dest *int) {
 			if err := db.QueryRow(query).Scan(dest); err != nil {
@@ -29,6 +30,9 @@ func Dashboard(db *sql.DB) fiber.Handler {
 		scanCount("SELECT COUNT(*) FROM sites WHERE status = 'running'", &runningCount)
 		scanCount("SELECT COUNT(*) FROM sites WHERE status = 'stopped'", &stoppedCount)
 		scanCount("SELECT COUNT(*) FROM sites WHERE status = 'error'", &errorCount)
+		scanCount("SELECT COUNT(*) FROM servers WHERE status IN ('online','active')", &serversOnline)
+		scanCount("SELECT COUNT(*) FROM servers WHERE status = 'offline'", &serversOffline)
+		scanCount("SELECT COUNT(*) FROM servers WHERE status NOT IN ('online','active','offline')", &serversUnknown)
 
 		activities, err := models.GetRecentActivities(db, 10)
 		if err != nil {
@@ -36,14 +40,17 @@ func Dashboard(db *sql.DB) fiber.Handler {
 		}
 
 		data := pages.DashboardData{
-			CustomerCount: strconv.Itoa(customerCount),
-			SiteCount:     strconv.Itoa(siteCount),
-			ServerCount:   strconv.Itoa(serverCount),
-			OverdueCount:  strconv.Itoa(overdueCount),
-			RunningCount:  runningCount,
-			StoppedCount:  stoppedCount,
-			ErrorCount:    errorCount,
-			Activities:    activities,
+			CustomerCount:  strconv.Itoa(customerCount),
+			SiteCount:      strconv.Itoa(siteCount),
+			ServerCount:    strconv.Itoa(serverCount),
+			OverdueCount:   strconv.Itoa(overdueCount),
+			RunningCount:   runningCount,
+			StoppedCount:   stoppedCount,
+			ErrorCount:     errorCount,
+			ServersOnline:  serversOnline,
+			ServersOffline: serversOffline,
+			ServersUnknown: serversUnknown,
+			Activities:     activities,
 		}
 
 		c.Set("Content-Type", "text/html")
