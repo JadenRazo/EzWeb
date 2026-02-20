@@ -46,6 +46,13 @@ func (m *Manager) BackupDatabase(dbPath string) (*BackupInfo, error) {
 	name := fmt.Sprintf("ezweb-db-%s.sql.gz", ts)
 	outPath := filepath.Join(m.backupDir, name)
 
+	// Flush all pending WAL frames into the main database file before copying.
+	// Without this, a hot copy of the .db file omits any transactions that are
+	// still in the WAL, producing a backup that is behind the current state.
+	if _, err := m.db.Exec("PRAGMA wal_checkpoint(TRUNCATE)"); err != nil {
+		log.Printf("wal_checkpoint before backup failed (non-fatal): %v", err)
+	}
+
 	src, err := os.Open(dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -270,6 +271,63 @@ func GetSiteByComposePath(db *sql.DB, composePath string) (*Site, error) {
 		return nil, fmt.Errorf("site not found by compose_path: %w", err)
 	}
 	return s, nil
+}
+
+// SearchSites returns a page of sites filtered by an optional domain substring
+// search and an optional exact status match. Either filter may be an empty
+// string to indicate "no filter". It also returns the total count of matching
+// rows so the caller can compute pagination metadata.
+func SearchSites(db *sql.DB, query, status string, page, perPage int) ([]Site, int, error) {
+	var conditions []string
+	var args []interface{}
+
+	if query != "" {
+		conditions = append(conditions, "s.domain LIKE ?")
+		args = append(args, "%"+query+"%")
+	}
+	if status != "" {
+		conditions = append(conditions, "s.status = ?")
+		args = append(args, status)
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	// Count total matching rows for pagination metadata.
+	var total int
+	countArgs := make([]interface{}, len(args))
+	copy(countArgs, args)
+	countQuery := "SELECT COUNT(*) FROM sites s" + whereClause
+	if err := db.QueryRow(countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count filtered sites: %w", err)
+	}
+
+	// Fetch the requested page.
+	offset := (page - 1) * perPage
+	listArgs := append(args, perPage, offset)
+	listQuery := `SELECT ` + siteSelectColumns + siteFromJoins + whereClause +
+		` ORDER BY s.created_at DESC LIMIT ? OFFSET ?`
+
+	rows, err := db.Query(listQuery, listArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to query filtered sites: %w", err)
+	}
+	defer rows.Close()
+
+	var sites []Site
+	for rows.Next() {
+		s, err := scanSite(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan site row: %w", err)
+		}
+		sites = append(sites, *s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("site row iteration error: %w", err)
+	}
+	return sites, total, nil
 }
 
 // UpdateSiteSSLExpiry stores the latest observed certificate expiry time for

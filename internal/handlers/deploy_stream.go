@@ -70,9 +70,10 @@ func DeploySSE(db *sql.DB) fiber.Handler {
 
 				writeLine(fmt.Sprintf("Connecting to server %s...", server.Name))
 				writeLine("Deploying containers...")
+				envContent, _ := models.RenderEnvFile(db, id)
 				deployErr = docker.DeploySite(
 					server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey,
-					site.Domain, site.TemplateSlug, site.ContainerName, site.Port,
+					site.Domain, site.TemplateSlug, site.ContainerName, site.Port, envContent,
 				)
 			}
 

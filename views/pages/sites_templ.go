@@ -45,7 +45,24 @@ func siteHelpGuide() templ.Component {
 	})
 }
 
-func Sites(sites []models.Site, servers []models.Server, templates []models.SiteTemplate, customers []models.Customer, currentPage int, totalItems int, itemsPerPage int) templ.Component {
+// sitePaginationPath builds the base URL for pagination links, preserving any
+// active search or status filter query parameters so page navigation does not
+// silently reset the user's filters.
+func sitePaginationPath(searchQuery, statusFilter string) string {
+	base := "/sites"
+	sep := "?"
+	if searchQuery != "" {
+		base += sep + "q=" + searchQuery
+		sep = "&"
+	}
+	if statusFilter != "" {
+		base += sep + "status=" + statusFilter
+		sep = "&"
+	}
+	return base
+}
+
+func Sites(sites []models.Site, servers []models.Server, templates []models.SiteTemplate, customers []models.Customer, currentPage int, totalItems int, itemsPerPage int, searchQuery string, statusFilter string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -86,24 +103,117 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<main class=\"flex-1 p-6 lg:p-10 pt-16 lg:pt-10\" x-data=\"siteFilter()\"><div class=\"flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8\"><div><h2 class=\"text-2xl font-bold text-gray-900\">Sites</h2><p class=\"text-sm text-gray-500 mt-1\">Manage your deployed websites and their server assignments <span class=\"ml-2 text-xs text-gray-400\" x-show=\"searchQuery || statusFilter !== 'all' || typeFilter !== 'all'\" x-cloak>— Showing <span x-text=\"visibleCount\"></span> of ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<main class=\"flex-1 p-6 lg:p-10 pt-16 lg:pt-10\" x-data=\"siteBulk()\"><div class=\"flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8\"><div><h2 class=\"text-2xl font-bold text-gray-900\">Sites</h2><p class=\"text-sm text-gray-500 mt-1\">Manage your deployed websites and their server assignments ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var4 string
-			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(sites)))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 44, Col: 85}
+			if searchQuery != "" || statusFilter != "" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<span class=\"ml-2 text-xs text-gray-400\">— ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var4 string
+				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(totalItems))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 61, Col: 79}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, " result(s)</span>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</p></div><button data-modal-open=\"add-site\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-150\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"2.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 4.5v15m7.5-7.5h-15\"></path></svg> Add Site</button></div><!-- Search & Filter Bar — uses HTMX for server-side filtering --><form id=\"site-filter-form\" hx-get=\"/sites\" hx-target=\"main\" hx-swap=\"outerHTML\" hx-push-url=\"true\" hx-trigger=\"change from:#status-filter, input delay:350ms from:#site-search\" class=\"mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm\"><div class=\"w-full sm:flex-1 sm:min-w-[200px]\"><input type=\"text\" id=\"site-search\" name=\"q\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</span></p></div><button data-modal-open=\"add-site\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-150\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"2.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 4.5v15m7.5-7.5h-15\"></path></svg> Add Site</button></div><!-- Search & Filter Bar --><div class=\"mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm\"><div class=\"w-full sm:flex-1 sm:min-w-[200px]\"><input type=\"text\" placeholder=\"Search by domain...\" x-model=\"searchQuery\" class=\"w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\"></div><select x-model=\"statusFilter\" class=\"px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"all\">All statuses</option> <option value=\"running\">Running</option> <option value=\"stopped\">Stopped</option> <option value=\"pending\">Pending</option> <option value=\"error\">Error</option> <option value=\"deploying\">Deploying</option></select> <select x-model=\"typeFilter\" class=\"px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"all\">All types</option> <option value=\"local\">Local</option> <option value=\"remote\">Remote</option></select> <button x-show=\"searchQuery || statusFilter !== 'all' || typeFilter !== 'all'\" x-cloak @click=\"searchQuery = ''; statusFilter = 'all'; typeFilter = 'all'\" class=\"px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors\">Clear</button></div><!-- Bulk Action Toolbar --><div x-show=\"bulkCount > 0\" x-cloak class=\"mb-4 flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200 shadow-sm\"><span class=\"text-sm font-medium text-blue-700\" x-text=\"bulkCount + ' site(s) selected'\"></span><form id=\"bulk-form\" hx-post=\"/sites/bulk\" hx-target=\"#site-list\" hx-swap=\"innerHTML\" class=\"flex items-center gap-2\"><select name=\"action\" class=\"px-3 py-1.5 border border-blue-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500\"><option value=\"\">Choose action...</option> <option value=\"start\">Start</option> <option value=\"stop\">Stop</option> <option value=\"restart\">Restart</option></select> <button type=\"submit\" class=\"px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors\">Apply</button></form></div>")
+			var templ_7745c5c3_Var5 string
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(searchQuery)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 91, Col: 26}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Var5 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" placeholder=\"Search by domain...\" autocomplete=\"off\" class=\"w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\"></div><select id=\"status-filter\" name=\"status\" class=\"px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if statusFilter == "" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, " selected")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, ">All statuses</option> <option value=\"running\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if statusFilter == "running" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, " selected")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, ">Running</option> <option value=\"stopped\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if statusFilter == "stopped" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, " selected")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, ">Stopped</option> <option value=\"pending\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if statusFilter == "pending" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, " selected")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, ">Pending</option> <option value=\"error\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if statusFilter == "error" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, " selected")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, ">Error</option> <option value=\"deploying\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if statusFilter == "deploying" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, " selected")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, ">Deploying</option></select> ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if searchQuery != "" || statusFilter != "" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<a href=\"/sites\" class=\"px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors\">Clear</a>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</form><!-- Bulk Action Toolbar --><div x-show=\"bulkCount > 0\" x-cloak class=\"mb-4 flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200 shadow-sm\"><span class=\"text-sm font-medium text-blue-700\" x-text=\"bulkCount + ' site(s) selected'\"></span><form id=\"bulk-form\" hx-post=\"/sites/bulk\" hx-target=\"main\" hx-swap=\"outerHTML\" class=\"flex items-center gap-2\"><select name=\"action\" class=\"px-3 py-1.5 border border-blue-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500\"><option value=\"\">Choose action...</option> <option value=\"start\">Start</option> <option value=\"stop\">Stop</option> <option value=\"restart\">Restart</option></select> <button type=\"submit\" class=\"px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors\">Apply</button></form></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Var6 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 				if !templ_7745c5c3_IsBuffer {
@@ -115,7 +225,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Var6 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+				templ_7745c5c3_Var7 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 					templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 					templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 					if !templ_7745c5c3_IsBuffer {
@@ -127,12 +237,27 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 						}()
 					}
 					ctx = templ.InitializeContext(ctx)
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<thead><tr class=\"bg-gray-50 border-b border-gray-200\"><th class=\"px-3 py-3 w-10\"><input type=\"checkbox\" @change=\"toggleAll($event)\" class=\"w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500\"></th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Domain</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Type</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Server</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Template</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Status</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Actions</th></tr></thead> <tbody id=\"site-list\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<thead><tr class=\"bg-gray-50 border-b border-gray-200\"><th class=\"px-3 py-3 w-10\"><input type=\"checkbox\" @change=\"toggleAll($event)\" class=\"w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500\"></th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Domain</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Type</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Server</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Template</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Status</th><th class=\"px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider\">Actions</th></tr></thead> <tbody id=\"site-list\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					if len(sites) == 0 {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<tr><td colspan=\"7\" class=\"px-6 py-16 text-center\"><div class=\"flex flex-col items-center gap-3\"><div class=\"w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center\"><svg class=\"w-6 h-6 text-gray-400\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918\"></path></svg></div><p class=\"text-sm font-medium text-gray-900\">No sites yet</p><p class=\"text-xs text-gray-400\">Get started by adding your first site.</p></div></td></tr>")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<tr><td colspan=\"7\" class=\"px-6 py-16 text-center\"><div class=\"flex flex-col items-center gap-3\"><div class=\"w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center\"><svg class=\"w-6 h-6 text-gray-400\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918\"></path></svg></div>")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						if searchQuery != "" || statusFilter != "" {
+							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<p class=\"text-sm font-medium text-gray-900\">No sites match your filters</p><p class=\"text-xs text-gray-400\">Try adjusting your search or clearing the filters.</p>")
+							if templ_7745c5c3_Err != nil {
+								return templ_7745c5c3_Err
+							}
+						} else {
+							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<p class=\"text-sm font-medium text-gray-900\">No sites yet</p><p class=\"text-xs text-gray-400\">Get started by adding your first site.</p>")
+							if templ_7745c5c3_Err != nil {
+								return templ_7745c5c3_Err
+							}
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</div></td></tr>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -143,31 +268,31 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 							return templ_7745c5c3_Err
 						}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</tbody>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</tbody>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					return nil
 				})
-				templ_7745c5c3_Err = components.Table().Render(templ.WithChildren(ctx, templ_7745c5c3_Var6), templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = components.Table().Render(templ.WithChildren(ctx, templ_7745c5c3_Var7), templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = components.Card("").Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = components.Card("").Render(templ.WithChildren(ctx, templ_7745c5c3_Var6), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = components.Pagination(components.NewPagination(currentPage, totalItems, itemsPerPage, "/sites")).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = components.Pagination(components.NewPagination(currentPage, totalItems, itemsPerPage, sitePaginationPath(searchQuery, statusFilter))).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<script>\n\t\t\t\tfunction siteFilter() {\n\t\t\t\t\treturn {\n\t\t\t\t\t\tsearchQuery: '',\n\t\t\t\t\t\tstatusFilter: 'all',\n\t\t\t\t\t\ttypeFilter: 'all',\n\t\t\t\t\t\tget visibleCount() {\n\t\t\t\t\t\t\treturn this.filterRows();\n\t\t\t\t\t\t},\n\t\t\t\t\t\tfilterRows() {\n\t\t\t\t\t\t\tvar rows = document.querySelectorAll('#site-list tr[data-domain]');\n\t\t\t\t\t\t\tvar count = 0;\n\t\t\t\t\t\t\tvar q = this.searchQuery.toLowerCase();\n\t\t\t\t\t\t\tvar sf = this.statusFilter;\n\t\t\t\t\t\t\tvar tf = this.typeFilter;\n\t\t\t\t\t\t\trows.forEach(function(row) {\n\t\t\t\t\t\t\t\tvar domain = row.getAttribute('data-domain') || '';\n\t\t\t\t\t\t\t\tvar status = row.getAttribute('data-status') || '';\n\t\t\t\t\t\t\t\tvar type = row.getAttribute('data-type') || '';\n\t\t\t\t\t\t\t\tvar show = true;\n\t\t\t\t\t\t\t\tif (q && domain.indexOf(q) === -1) show = false;\n\t\t\t\t\t\t\t\tif (sf !== 'all' && status !== sf) show = false;\n\t\t\t\t\t\t\t\tif (tf !== 'all' && type !== tf) show = false;\n\t\t\t\t\t\t\t\trow.style.display = show ? '' : 'none';\n\t\t\t\t\t\t\t\tif (show) count++;\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\treturn count;\n\t\t\t\t\t\t},\n\t\t\t\t\t\tbulkCount: 0,\n\t\t\t\t\t\ttoggleAll(event) {\n\t\t\t\t\t\t\tvar checked = event.target.checked;\n\t\t\t\t\t\t\tdocument.querySelectorAll('#site-list input[name=\"site_ids\"]').forEach(function(cb) {\n\t\t\t\t\t\t\t\tif (cb.closest('tr').style.display !== 'none') cb.checked = checked;\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\tthis.updateBulkCount();\n\t\t\t\t\t\t},\n\t\t\t\t\t\tupdateBulkCount() {\n\t\t\t\t\t\t\tthis.bulkCount = document.querySelectorAll('#site-list input[name=\"site_ids\"]:checked').length;\n\t\t\t\t\t\t},\n\t\t\t\t\t\tinit() {\n\t\t\t\t\t\t\tthis.$watch('searchQuery', () => this.filterRows());\n\t\t\t\t\t\t\tthis.$watch('statusFilter', () => this.filterRows());\n\t\t\t\t\t\t\tthis.$watch('typeFilter', () => this.filterRows());\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\t</script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<script>\n\t\t\t\tfunction siteBulk() {\n\t\t\t\t\treturn {\n\t\t\t\t\t\tbulkCount: 0,\n\t\t\t\t\t\ttoggleAll(event) {\n\t\t\t\t\t\t\tvar checked = event.target.checked;\n\t\t\t\t\t\t\tdocument.querySelectorAll('#site-list input[name=\"site_ids\"]').forEach(function(cb) {\n\t\t\t\t\t\t\t\tcb.checked = checked;\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\tthis.updateBulkCount();\n\t\t\t\t\t\t},\n\t\t\t\t\t\tupdateBulkCount() {\n\t\t\t\t\t\t\tthis.bulkCount = document.querySelectorAll('#site-list input[name=\"site_ids\"]:checked').length;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\t</script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Var7 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_Var8 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 				if !templ_7745c5c3_IsBuffer {
@@ -179,7 +304,7 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<form hx-post=\"/sites\" hx-target=\"#site-list\" hx-swap=\"beforeend\" hx-on:htmx:after-request=\"if(event.detail.successful) EzModal.close()\" class=\"space-y-5\" x-data=\"{ isLocal: false }\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<form hx-post=\"/sites\" hx-target=\"#site-list\" hx-swap=\"beforeend\" hx-on:htmx:after-request=\"if(event.detail.successful) EzModal.close()\" class=\"space-y-5\" x-data=\"{ isLocal: false }\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -187,138 +312,138 @@ func Sites(sites []models.Site, servers []models.Server, templates []models.Site
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div><label for=\"domain\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Domain</label> <input type=\"text\" id=\"domain\" name=\"domain\" required class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"example.com\"></div><div class=\"flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200\"><input type=\"checkbox\" id=\"is_local\" name=\"is_local\" value=\"1\" x-model=\"isLocal\" class=\"w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500\"> <label for=\"is_local\" class=\"text-sm font-medium text-gray-700\">Local site (Docker on this machine)</label></div><div x-show=\"isLocal\"><label for=\"compose_path\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Compose Path</label> <input type=\"text\" id=\"compose_path\" name=\"compose_path\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"/path/to/compose/project\"></div><div x-show=\"!isLocal\"><label for=\"template_slug\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Template</label> <select id=\"template_slug\" name=\"template_slug\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">Select a template...</option> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<div><label for=\"domain\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Domain</label> <input type=\"text\" id=\"domain\" name=\"domain\" required class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"example.com\"></div><div class=\"flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200\"><input type=\"checkbox\" id=\"is_local\" name=\"is_local\" value=\"1\" x-model=\"isLocal\" class=\"w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500\"> <label for=\"is_local\" class=\"text-sm font-medium text-gray-700\">Local site (Docker on this machine)</label></div><div x-show=\"isLocal\"><label for=\"compose_path\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Compose Path</label> <input type=\"text\" id=\"compose_path\" name=\"compose_path\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"/path/to/compose/project\"></div><div x-show=\"!isLocal\"><label for=\"template_slug\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Template</label> <select id=\"template_slug\" name=\"template_slug\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">Select a template...</option> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				for _, t := range templates {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<option value=\"")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var8 string
-					templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(t.Slug)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 235, Col: 31}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<option value=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var9 string
-					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(t.Label)
+					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(t.Slug)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 235, Col: 43}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 231, Col: 31}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</option>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</select></div><div x-show=\"!isLocal\"><label for=\"server_id\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Server</label> <select id=\"server_id\" name=\"server_id\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">No server (assign later)</option> ")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				for _, srv := range servers {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<option value=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var10 string
-					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(srv.ID))
+					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(t.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 245, Col: 45}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 231, Col: 43}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</option>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</select></div><div x-show=\"!isLocal\"><label for=\"server_id\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Server</label> <select id=\"server_id\" name=\"server_id\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">No server (assign later)</option> ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				for _, srv := range servers {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "<option value=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var11 string
-					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Name)
+					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(srv.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 245, Col: 58}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 241, Col: 45}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, " (")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var12 string
-					templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Host)
+					templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 245, Col: 72}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 241, Col: 58}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, ")</option>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</select></div><div><label for=\"customer_id\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Customer</label> <select id=\"customer_id\" name=\"customer_id\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">No customer (assign later)</option> ")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				for _, cust := range customers {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<option value=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, " (")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var13 string
-					templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(cust.ID))
+					templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Host)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 255, Col: 46}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 241, Col: 72}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, ")</option>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "</select></div><div><label for=\"customer_id\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Customer</label> <select id=\"customer_id\" name=\"customer_id\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">No customer (assign later)</option> ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				for _, cust := range customers {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<option value=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var14 string
-					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(cust.Name)
+					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(cust.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 255, Col: 60}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 251, Col: 46}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</option>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "\">")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var15 string
+					templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(cust.Name)
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 251, Col: 60}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</option>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</select></div><div class=\"grid grid-cols-1 sm:grid-cols-2 gap-4\"><div><label for=\"container_name\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Container Name</label> <input type=\"text\" id=\"container_name\" name=\"container_name\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-generated\"></div><div><label for=\"port\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Port</label> <input type=\"number\" id=\"port\" name=\"port\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-assigned\"></div></div><div class=\"flex justify-end gap-3 pt-2 border-t border-gray-100\"><button type=\"submit\" formmethod=\"dialog\" formnovalidate class=\"px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors\">Cancel</button> <button type=\"submit\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150\">Add Site</button></div></form>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</select></div><div class=\"grid grid-cols-1 sm:grid-cols-2 gap-4\"><div><label for=\"container_name\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Container Name</label> <input type=\"text\" id=\"container_name\" name=\"container_name\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-generated\"></div><div><label for=\"port\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Port</label> <input type=\"number\" id=\"port\" name=\"port\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-assigned\"></div></div><div class=\"flex justify-end gap-3 pt-2 border-t border-gray-100\"><button type=\"submit\" formmethod=\"dialog\" formnovalidate class=\"px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors\">Cancel</button> <button type=\"submit\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150\">Add Site</button></div></form>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = components.Modal("add-site", "Add Site").Render(templ.WithChildren(ctx, templ_7745c5c3_Var7), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = components.Modal("add-site", "Add Site").Render(templ.WithChildren(ctx, templ_7745c5c3_Var8), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</main></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</main></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -348,12 +473,12 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var15 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var15 == nil {
-			templ_7745c5c3_Var15 = templ.NopComponent
+		templ_7745c5c3_Var16 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var16 == nil {
+			templ_7745c5c3_Var16 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Var16 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var17 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -365,7 +490,7 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<div class=\"flex min-h-screen\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<div class=\"flex min-h-screen\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -373,11 +498,11 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<main class=\"flex-1 p-6 lg:p-10\"><div class=\"mb-8\"><h2 class=\"text-2xl font-bold text-gray-900\">New Site</h2><p class=\"text-sm text-gray-500 mt-1\">Configure and deploy a new website</p></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<main class=\"flex-1 p-6 lg:p-10\"><div class=\"mb-8\"><h2 class=\"text-2xl font-bold text-gray-900\">New Site</h2><p class=\"text-sm text-gray-500 mt-1\">Configure and deploy a new website</p></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Var17 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_Var18 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 				if !templ_7745c5c3_IsBuffer {
@@ -389,7 +514,7 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<form action=\"/sites\" method=\"POST\" class=\"space-y-5\" x-data=\"{ isLocal: false }\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "<form action=\"/sites\" method=\"POST\" class=\"space-y-5\" x-data=\"{ isLocal: false }\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -397,157 +522,157 @@ func SiteForm(servers []models.Server, templates []models.SiteTemplate, customer
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<div><label for=\"domain\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Domain</label> <input type=\"text\" id=\"domain\" name=\"domain\" required class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"example.com\"></div><div class=\"flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200\"><input type=\"checkbox\" id=\"is_local_form\" name=\"is_local\" value=\"1\" x-model=\"isLocal\" class=\"w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500\"> <label for=\"is_local_form\" class=\"text-sm font-medium text-gray-700\">Local site (Docker on this machine)</label></div><div x-show=\"isLocal\"><label for=\"compose_path_form\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Compose Path</label> <input type=\"text\" id=\"compose_path_form\" name=\"compose_path\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"/path/to/compose/project\"></div><div x-show=\"!isLocal\"><label for=\"template_slug\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Template</label> <select id=\"template_slug\" name=\"template_slug\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">Select a template...</option> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "<div><label for=\"domain\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Domain</label> <input type=\"text\" id=\"domain\" name=\"domain\" required class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"example.com\"></div><div class=\"flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200\"><input type=\"checkbox\" id=\"is_local_form\" name=\"is_local\" value=\"1\" x-model=\"isLocal\" class=\"w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500\"> <label for=\"is_local_form\" class=\"text-sm font-medium text-gray-700\">Local site (Docker on this machine)</label></div><div x-show=\"isLocal\"><label for=\"compose_path_form\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Compose Path</label> <input type=\"text\" id=\"compose_path_form\" name=\"compose_path\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"/path/to/compose/project\"></div><div x-show=\"!isLocal\"><label for=\"template_slug\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Template</label> <select id=\"template_slug\" name=\"template_slug\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">Select a template...</option> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				for _, t := range templates {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<option value=\"")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var18 string
-					templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(t.Slug)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 325, Col: 31}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "<option value=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var19 string
-					templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(t.Label)
+					templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(t.Slug)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 325, Col: 43}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 321, Col: 31}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, " - ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var20 string
-					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(t.Description)
+					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(t.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 325, Col: 63}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 321, Col: 43}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</option>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</select></div><div x-show=\"!isLocal\"><label for=\"server_id\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Server</label> <select id=\"server_id\" name=\"server_id\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">No server (assign later)</option> ")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				for _, srv := range servers {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "<option value=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, " - ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var21 string
-					templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(srv.ID))
+					templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(t.Description)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 335, Col: 45}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 321, Col: 63}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "</option>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "</select></div><div x-show=\"!isLocal\"><label for=\"server_id\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Server</label> <select id=\"server_id\" name=\"server_id\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">No server (assign later)</option> ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				for _, srv := range servers {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<option value=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var22 string
-					templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Name)
+					templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(srv.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 335, Col: 58}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 331, Col: 45}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, " (")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var23 string
-					templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Host)
+					templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 335, Col: 72}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 331, Col: 58}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, ")</option>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</select></div><div><label for=\"customer_id\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Customer</label> <select id=\"customer_id\" name=\"customer_id\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">No customer (assign later)</option> ")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				for _, cust := range customers {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<option value=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, " (")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var24 string
-					templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(cust.ID))
+					templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(srv.Host)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 345, Col: 46}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 331, Col: 72}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, ")</option>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 58, "</select></div><div><label for=\"customer_id\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Customer</label> <select id=\"customer_id\" name=\"customer_id\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none\"><option value=\"\">No customer (assign later)</option> ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				for _, cust := range customers {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "<option value=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var25 string
-					templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(cust.Name)
+					templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(cust.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 345, Col: 60}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 341, Col: 46}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</option>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "\">")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var26 string
+					templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(cust.Name)
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/pages/sites.templ`, Line: 341, Col: 60}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "</option>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</select></div><div class=\"grid grid-cols-1 sm:grid-cols-2 gap-4\"><div><label for=\"container_name\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Container Name</label> <input type=\"text\" id=\"container_name\" name=\"container_name\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-generated from domain\"></div><div><label for=\"port\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Port</label> <input type=\"number\" id=\"port\" name=\"port\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-assigned\"></div></div><div class=\"flex justify-end gap-3 pt-2 border-t border-gray-100\"><a href=\"/sites\" class=\"px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors\">Cancel</a> <button type=\"submit\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150\">Create Site</button></div></form>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "</select></div><div class=\"grid grid-cols-1 sm:grid-cols-2 gap-4\"><div><label for=\"container_name\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Container Name</label> <input type=\"text\" id=\"container_name\" name=\"container_name\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-generated from domain\"></div><div><label for=\"port\" class=\"block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5\">Port</label> <input type=\"number\" id=\"port\" name=\"port\" class=\"w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors\" placeholder=\"Auto-assigned\"></div></div><div class=\"flex justify-end gap-3 pt-2 border-t border-gray-100\"><a href=\"/sites\" class=\"px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors\">Cancel</a> <button type=\"submit\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium text-sm shadow-sm transition-all duration-150\">Create Site</button></div></form>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = components.Card("Site Configuration").Render(templ.WithChildren(ctx, templ_7745c5c3_Var17), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = components.Card("Site Configuration").Render(templ.WithChildren(ctx, templ_7745c5c3_Var18), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</main></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "</main></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = layouts.Base("New Site").Render(templ.WithChildren(ctx, templ_7745c5c3_Var16), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = layouts.Base("New Site").Render(templ.WithChildren(ctx, templ_7745c5c3_Var17), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

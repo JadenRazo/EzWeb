@@ -70,6 +70,26 @@ func UpdateUserRole(db *sql.DB, id int, role string) error {
 	return err
 }
 
+func GetUserByID(db *sql.DB, id int) (*User, error) {
+	user := &User{}
+	err := db.QueryRow(
+		"SELECT id, username, password, COALESCE(role, 'admin'), created_at FROM users WHERE id = ?",
+		id,
+	).Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+	return user, nil
+}
+
+func UpdateUserPassword(db *sql.DB, id int, hashedPassword string) error {
+	_, err := db.Exec("UPDATE users SET password = ? WHERE id = ?", hashedPassword, id)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+	return nil
+}
+
 func DeleteUser(db *sql.DB, id int) error {
 	_, err := db.Exec("DELETE FROM users WHERE id = ?", id)
 	return err

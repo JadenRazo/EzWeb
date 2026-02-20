@@ -48,14 +48,89 @@ The app starts on `http://localhost:3000`. Default login: `admin` / `admin123`.
 
 ### Environment Variables
 
+**Core**
+
 | Variable | Default | Description |
 |---|---|---|
 | `APP_PORT` | `3000` | HTTP listen port |
-| `JWT_SECRET` | (required) | Secret key for JWT signing |
-| `ADMIN_USER` | `admin` | Initial admin username |
-| `ADMIN_PASS` | `admin123` | Initial admin password |
-| `DB_PATH` | `./ezweb.db` | SQLite database path |
-| `CADDY_ADMIN_URL` | `http://localhost:2019` | Caddy admin API endpoint |
+| `JWT_SECRET` | (required) | Secret key for JWT signing — min 32 chars |
+| `JWT_EXPIRY_HOURS` | `24` | Session lifetime in hours |
+
+**Admin Credentials**
+
+| Variable | Default | Description |
+|---|---|---|
+| `ADMIN_USER` | `admin` | Admin username |
+| `ADMIN_PASS` | (required) | Admin password — min 8 chars |
+
+**Database**
+
+| Variable | Default | Description |
+|---|---|---|
+| `DB_PATH` | `./ezweb.db` | SQLite database file path |
+| `DB_MAX_OPEN_CONNS` | `25` | Max open database connections |
+| `DB_MAX_IDLE_CONNS` | `5` | Max idle database connections |
+
+**Caddy / Reverse Proxy**
+
+| Variable | Default | Description |
+|---|---|---|
+| `CADDYFILE_PATH` | `/etc/caddy/Caddyfile` | Path to the managed Caddyfile |
+| `ACME_EMAIL` | | Email for Let's Encrypt certificate registration |
+
+**Security**
+
+| Variable | Default | Description |
+|---|---|---|
+| `SECURE_COOKIES` | `false` | Set `true` in production (requires HTTPS) |
+| `LOCKOUT_MAX_ATTEMPTS` | `5` | Failed login attempts before lockout |
+| `LOCKOUT_DURATION_MIN` | `15` | Lockout duration in minutes |
+
+**SSH**
+
+| Variable | Default | Description |
+|---|---|---|
+| `SSH_KEY_DIR` | | Directory where SSH private keys are stored |
+
+**Backups**
+
+| Variable | Default | Description |
+|---|---|---|
+| `BACKUP_DIR` | `./backups` | Directory for site backup archives |
+
+**Webhooks & Alerting**
+
+| Variable | Default | Description |
+|---|---|---|
+| `WEBHOOK_URL` | | Webhook endpoint for notifications |
+| `WEBHOOK_FORMAT` | `discord` | Webhook format — `discord` or `slack` |
+| `ALERT_THRESHOLD` | `3` | Consecutive failures before an alert fires |
+| `ALERT_EMAIL` | | Email address to receive alerts |
+
+**SMTP**
+
+| Variable | Default | Description |
+|---|---|---|
+| `SMTP_HOST` | | SMTP server hostname |
+| `SMTP_PORT` | `587` | SMTP server port |
+| `SMTP_FROM` | | Sender address for outgoing email |
+| `SMTP_USERNAME` | | SMTP authentication username |
+| `SMTP_PASSWORD` | | SMTP authentication password |
+
+**Metrics & Health Checks**
+
+| Variable | Default | Description |
+|---|---|---|
+| `METRICS_ENABLED` | `false` | Enable Prometheus-style metrics endpoint |
+| `HEALTH_CHECK_INTERVAL` | `5` | How often to poll sites, in minutes |
+| `HEALTH_RETENTION_DAYS` | `30` | Days to retain health check history |
+| `ACTIVITY_RETENTION_DAYS` | `90` | Days to retain activity log entries |
+
+**Domain Filtering**
+
+| Variable | Default | Description |
+|---|---|---|
+| `PUBLIC_DOMAIN_FILTER` | | Optional suffix to filter public-facing domains |
 
 ## Build
 

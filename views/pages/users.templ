@@ -17,7 +17,18 @@ func userRowID(u models.User) string {
 	return "user-" + strconv.Itoa(u.ID)
 }
 
-templ Users(users []models.User) {
+func passwordModalID(u models.User) string {
+	return "change-password-" + strconv.Itoa(u.ID)
+}
+
+func oppositeRole(role string) string {
+	if role == "admin" {
+		return "viewer"
+	}
+	return "admin"
+}
+
+templ Users(users []models.User, currentUsername string) {
 	@layouts.Base("Users") {
 		<div class="flex">
 			@components.Navbar("/users")
@@ -54,7 +65,12 @@ templ Users(users []models.User) {
 							<tbody class="divide-y divide-gray-100">
 								for _, u := range users {
 									<tr class="hover:bg-gray-50 transition-colors" id={ userRowID(u) }>
-										<td class="px-4 py-3 font-medium text-gray-900">{ u.Username }</td>
+										<td class="px-4 py-3 font-medium text-gray-900">
+											{ u.Username }
+											if u.Username == currentUsername {
+												<span class="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">you</span>
+											}
+										</td>
 										<td class="px-4 py-3">
 											if u.Role == "admin" {
 												<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Admin</span>
@@ -64,15 +80,36 @@ templ Users(users []models.User) {
 										</td>
 										<td class="px-4 py-3 text-gray-600">{ formatUserCreatedAt(u) }</td>
 										<td class="px-4 py-3 text-right">
-											<button
-												hx-delete={ "/users/" + strconv.Itoa(u.ID) }
-												hx-target={ "#" + userRowID(u) }
-												hx-swap="outerHTML"
-												hx-confirm={ "Delete user " + u.Username + "?" }
-												class="text-red-500 hover:text-red-700 text-xs font-medium"
-											>
-												Delete
-											</button>
+											<div class="inline-flex items-center gap-2">
+												<!-- Change Password -->
+												<button
+													data-modal-open={ passwordModalID(u) }
+													class="text-gray-500 hover:text-gray-700 text-xs font-medium"
+												>
+													Password
+												</button>
+												<!-- Role Toggle — hidden for current user -->
+												if u.Username != currentUsername {
+													<button
+														hx-put={ "/users/" + strconv.Itoa(u.ID) + "/role" }
+														hx-vals={ `{"role":"` + oppositeRole(u.Role) + `"}` }
+														hx-confirm={ "Change " + u.Username + " to " + oppositeRole(u.Role) + "?" }
+														hx-swap="none"
+														class="text-indigo-500 hover:text-indigo-700 text-xs font-medium"
+													>
+														Make { oppositeRole(u.Role) }
+													</button>
+													<button
+														hx-delete={ "/users/" + strconv.Itoa(u.ID) }
+														hx-target={ "#" + userRowID(u) }
+														hx-swap="outerHTML"
+														hx-confirm={ "Delete user " + u.Username + "?" }
+														class="text-red-500 hover:text-red-700 text-xs font-medium"
+													>
+														Delete
+													</button>
+												}
+											</div>
 										</td>
 									</tr>
 								}
@@ -85,6 +122,58 @@ templ Users(users []models.User) {
 						</table>
 					</div>
 				</div>
+
+				<!-- Per-user Change Password modals -->
+				for _, u := range users {
+					@components.Modal(passwordModalID(u), "Change Password — "+u.Username) {
+						<form
+							hx-put={ "/users/" + strconv.Itoa(u.ID) + "/password" }
+							hx-swap="none"
+							class="space-y-4"
+						>
+							if u.Username == currentUsername {
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+									<input
+										type="password"
+										name="current_password"
+										required
+										autocomplete="current-password"
+										class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+										placeholder="enter current password"
+									/>
+								</div>
+							}
+							<div>
+								<label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+								<input
+									type="password"
+									name="new_password"
+									required
+									minlength="8"
+									autocomplete="new-password"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+									placeholder="minimum 8 characters"
+								/>
+							</div>
+							<div class="flex justify-end gap-3 pt-2">
+								<button
+									type="button"
+									onclick="this.closest('dialog').close()"
+									class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+								>
+									Cancel
+								</button>
+								<button
+									type="submit"
+									class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+								>
+									Update Password
+								</button>
+							</div>
+						</form>
+					}
+				}
 
 				@components.Modal("add-user", "Add User") {
 					<form

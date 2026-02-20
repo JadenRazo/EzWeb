@@ -30,19 +30,36 @@ templ siteHelpGuide() {
 	</details>
 }
 
-templ Sites(sites []models.Site, servers []models.Server, templates []models.SiteTemplate, customers []models.Customer, currentPage int, totalItems int, itemsPerPage int) {
+// sitePaginationPath builds the base URL for pagination links, preserving any
+// active search or status filter query parameters so page navigation does not
+// silently reset the user's filters.
+func sitePaginationPath(searchQuery, statusFilter string) string {
+	base := "/sites"
+	sep := "?"
+	if searchQuery != "" {
+		base += sep + "q=" + searchQuery
+		sep = "&"
+	}
+	if statusFilter != "" {
+		base += sep + "status=" + statusFilter
+		sep = "&"
+	}
+	return base
+}
+
+templ Sites(sites []models.Site, servers []models.Server, templates []models.SiteTemplate, customers []models.Customer, currentPage int, totalItems int, itemsPerPage int, searchQuery string, statusFilter string) {
 	@layouts.Base("Sites") {
 		<div class="flex min-h-screen">
 			@components.Navbar("/sites")
-			<main class="flex-1 p-6 lg:p-10 pt-16 lg:pt-10" x-data="siteFilter()">
+			<main class="flex-1 p-6 lg:p-10 pt-16 lg:pt-10" x-data="siteBulk()">
 				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
 					<div>
 						<h2 class="text-2xl font-bold text-gray-900">Sites</h2>
 						<p class="text-sm text-gray-500 mt-1">
 							Manage your deployed websites and their server assignments
-							<span class="ml-2 text-xs text-gray-400" x-show="searchQuery || statusFilter !== 'all' || typeFilter !== 'all'" x-cloak>
-								— Showing <span x-text="visibleCount"></span> of { strconv.Itoa(len(sites)) }
-							</span>
+							if searchQuery != "" || statusFilter != "" {
+								<span class="ml-2 text-xs text-gray-400">— { strconv.Itoa(totalItems) } result(s)</span>
+							}
 						</p>
 					</div>
 					<button
@@ -56,49 +73,53 @@ templ Sites(sites []models.Site, servers []models.Server, templates []models.Sit
 					</button>
 				</div>
 
-				<!-- Search & Filter Bar -->
-				<div class="mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+				<!-- Search & Filter Bar — uses HTMX for server-side filtering -->
+				<form
+					id="site-filter-form"
+					hx-get="/sites"
+					hx-target="main"
+					hx-swap="outerHTML"
+					hx-push-url="true"
+					hx-trigger="change from:#status-filter, input delay:350ms from:#site-search"
+					class="mb-4 flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm"
+				>
 					<div class="w-full sm:flex-1 sm:min-w-[200px]">
 						<input
 							type="text"
+							id="site-search"
+							name="q"
+							value={ searchQuery }
 							placeholder="Search by domain..."
-							x-model="searchQuery"
+							autocomplete="off"
 							class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
 						/>
 					</div>
 					<select
-						x-model="statusFilter"
+						id="status-filter"
+						name="status"
 						class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none"
 					>
-						<option value="all">All statuses</option>
-						<option value="running">Running</option>
-						<option value="stopped">Stopped</option>
-						<option value="pending">Pending</option>
-						<option value="error">Error</option>
-						<option value="deploying">Deploying</option>
+						<option value="" selected?={ statusFilter == "" }>All statuses</option>
+						<option value="running" selected?={ statusFilter == "running" }>Running</option>
+						<option value="stopped" selected?={ statusFilter == "stopped" }>Stopped</option>
+						<option value="pending" selected?={ statusFilter == "pending" }>Pending</option>
+						<option value="error" selected?={ statusFilter == "error" }>Error</option>
+						<option value="deploying" selected?={ statusFilter == "deploying" }>Deploying</option>
 					</select>
-					<select
-						x-model="typeFilter"
-						class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none"
-					>
-						<option value="all">All types</option>
-						<option value="local">Local</option>
-						<option value="remote">Remote</option>
-					</select>
-					<button
-						x-show="searchQuery || statusFilter !== 'all' || typeFilter !== 'all'"
-						x-cloak
-						@click="searchQuery = ''; statusFilter = 'all'; typeFilter = 'all'"
-						class="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-					>
-						Clear
-					</button>
-				</div>
+					if searchQuery != "" || statusFilter != "" {
+						<a
+							href="/sites"
+							class="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+						>
+							Clear
+						</a>
+					}
+				</form>
 
 				<!-- Bulk Action Toolbar -->
 				<div x-show="bulkCount > 0" x-cloak class="mb-4 flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200 shadow-sm">
 					<span class="text-sm font-medium text-blue-700" x-text="bulkCount + ' site(s) selected'"></span>
-					<form id="bulk-form" hx-post="/sites/bulk" hx-target="#site-list" hx-swap="innerHTML" class="flex items-center gap-2">
+					<form id="bulk-form" hx-post="/sites/bulk" hx-target="main" hx-swap="outerHTML" class="flex items-center gap-2">
 						<select name="action" class="px-3 py-1.5 border border-blue-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
 							<option value="">Choose action...</option>
 							<option value="start">Start</option>
@@ -136,8 +157,13 @@ templ Sites(sites []models.Site, servers []models.Server, templates []models.Sit
 													<path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918"/>
 												</svg>
 											</div>
-											<p class="text-sm font-medium text-gray-900">No sites yet</p>
-											<p class="text-xs text-gray-400">Get started by adding your first site.</p>
+											if searchQuery != "" || statusFilter != "" {
+												<p class="text-sm font-medium text-gray-900">No sites match your filters</p>
+												<p class="text-xs text-gray-400">Try adjusting your search or clearing the filters.</p>
+											} else {
+												<p class="text-sm font-medium text-gray-900">No sites yet</p>
+												<p class="text-xs text-gray-400">Get started by adding your first site.</p>
+											}
 										</div>
 									</td>
 								</tr>
@@ -149,51 +175,21 @@ templ Sites(sites []models.Site, servers []models.Server, templates []models.Sit
 					}
 				}
 
-				@components.Pagination(components.NewPagination(currentPage, totalItems, itemsPerPage, "/sites"))
+				@components.Pagination(components.NewPagination(currentPage, totalItems, itemsPerPage, sitePaginationPath(searchQuery, statusFilter)))
 
 				<script>
-				function siteFilter() {
+				function siteBulk() {
 					return {
-						searchQuery: '',
-						statusFilter: 'all',
-						typeFilter: 'all',
-						get visibleCount() {
-							return this.filterRows();
-						},
-						filterRows() {
-							var rows = document.querySelectorAll('#site-list tr[data-domain]');
-							var count = 0;
-							var q = this.searchQuery.toLowerCase();
-							var sf = this.statusFilter;
-							var tf = this.typeFilter;
-							rows.forEach(function(row) {
-								var domain = row.getAttribute('data-domain') || '';
-								var status = row.getAttribute('data-status') || '';
-								var type = row.getAttribute('data-type') || '';
-								var show = true;
-								if (q && domain.indexOf(q) === -1) show = false;
-								if (sf !== 'all' && status !== sf) show = false;
-								if (tf !== 'all' && type !== tf) show = false;
-								row.style.display = show ? '' : 'none';
-								if (show) count++;
-							});
-							return count;
-						},
 						bulkCount: 0,
 						toggleAll(event) {
 							var checked = event.target.checked;
 							document.querySelectorAll('#site-list input[name="site_ids"]').forEach(function(cb) {
-								if (cb.closest('tr').style.display !== 'none') cb.checked = checked;
+								cb.checked = checked;
 							});
 							this.updateBulkCount();
 						},
 						updateBulkCount() {
 							this.bulkCount = document.querySelectorAll('#site-list input[name="site_ids"]:checked').length;
-						},
-						init() {
-							this.$watch('searchQuery', () => this.filterRows());
-							this.$watch('statusFilter', () => this.filterRows());
-							this.$watch('typeFilter', () => this.filterRows());
 						}
 					}
 				}

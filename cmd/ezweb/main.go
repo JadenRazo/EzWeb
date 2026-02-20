@@ -113,7 +113,7 @@ func main() {
 	}
 
 	// Public status API (unauthenticated, for external dashboards)
-	app.Get("/api/status", handlers.PublicStatus(database))
+	app.Get("/api/status", handlers.PublicStatus(database, cfg.PublicDomainFilter))
 
 	// Rate limit on login
 	loginLimiter := limiter.New(limiter.Config{
@@ -235,6 +235,8 @@ func main() {
 	adminOnly.Get("/users", handlers.ListUsers(database))
 	adminOnly.Post("/users", handlers.CreateUser(database))
 	adminOnly.Delete("/users/:id", handlers.DeleteUserHandler(database))
+	adminOnly.Put("/users/:id/password", handlers.ChangePassword(database))
+	adminOnly.Put("/users/:id/role", handlers.UpdateUserRoleHandler(database))
 
 	// Redirect root to dashboard
 	app.Get("/", func(c *fiber.Ctx) error {

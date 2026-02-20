@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"log"
+	"regexp"
 	"strconv"
 
 	"ezweb/internal/auth"
@@ -12,6 +13,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+var validUsername = regexp.MustCompile(`^[a-zA-Z0-9._-]{3,50}$`)
+
 func ListUsers(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		users, err := models.GetAllUsers(db)
@@ -20,8 +23,9 @@ func ListUsers(db *sql.DB) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to load users")
 		}
 
+		currentUsername, _ := c.Locals("username").(string)
 		c.Set("Content-Type", "text/html")
-		return pages.Users(users).Render(c.Context(), c.Response().BodyWriter())
+		return pages.Users(users, currentUsername).Render(c.Context(), c.Response().BodyWriter())
 	}
 }
 
@@ -33,6 +37,10 @@ func CreateUser(db *sql.DB) fiber.Handler {
 
 		if username == "" || password == "" {
 			return c.Status(fiber.StatusBadRequest).SendString("Username and password are required")
+		}
+
+		if !validUsername.MatchString(username) {
+			return c.Status(fiber.StatusBadRequest).SendString("Username must be 3-50 characters and may only contain letters, numbers, underscores, hyphens, and dots")
 		}
 
 		if len(password) < 8 {
@@ -84,6 +92,101 @@ func DeleteUserHandler(db *sql.DB) fiber.Handler {
 		models.LogActivityWithContext(db, "user", id, "deleted", "Deleted user", c.IP(), c.Get("User-Agent"))
 
 		if c.Get("HX-Request") != "" {
+			return c.SendString("")
+		}
+		return c.Redirect("/users")
+	}
+}
+
+// ChangePassword handles PUT /users/:id/password.
+// When a user changes their own password, current_password must match the stored hash.
+// Admins changing another user's password bypass the current_password check.
+func ChangePassword(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		targetID, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid user ID")
+		}
+
+		currentUserID, _ := c.Locals("user_id").(int)
+		isSelf := targetID == currentUserID
+
+		newPassword := c.FormValue("new_password")
+		if len(newPassword) < 8 {
+			return c.Status(fiber.StatusBadRequest).SendString("New password must be at least 8 characters")
+		}
+
+		target, err := models.GetUserByID(db, targetID)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).SendString("User not found")
+		}
+
+		if isSelf {
+			currentPassword := c.FormValue("current_password")
+			if currentPassword == "" {
+				return c.Status(fiber.StatusBadRequest).SendString("Current password is required")
+			}
+			if !auth.CheckPassword(target.Password, currentPassword) {
+				return c.Status(fiber.StatusUnauthorized).SendString("Current password is incorrect")
+			}
+		}
+
+		hash, err := auth.HashPassword(newPassword)
+		if err != nil {
+			log.Printf("failed to hash password for user %d: %v", targetID, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to hash password")
+		}
+
+		if err := models.UpdateUserPassword(db, targetID, hash); err != nil {
+			log.Printf("failed to update password for user %d: %v", targetID, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to update password")
+		}
+
+		models.LogActivityWithContext(db, "user", targetID, "password_changed",
+			"Password changed for user "+target.Username, c.IP(), c.Get("User-Agent"))
+
+		if c.Get("HX-Request") != "" {
+			c.Set("HX-Redirect", "/users")
+			return c.SendString("")
+		}
+		return c.Redirect("/users")
+	}
+}
+
+// UpdateUserRoleHandler handles PUT /users/:id/role.
+// Admins may change any user's role except their own, preventing self-lockout.
+func UpdateUserRoleHandler(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		targetID, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid user ID")
+		}
+
+		currentUserID, _ := c.Locals("user_id").(int)
+		if targetID == currentUserID {
+			return c.Status(fiber.StatusBadRequest).SendString("You cannot change your own role")
+		}
+
+		role := c.FormValue("role")
+		if role != "admin" && role != "viewer" {
+			return c.Status(fiber.StatusBadRequest).SendString("Role must be 'admin' or 'viewer'")
+		}
+
+		target, err := models.GetUserByID(db, targetID)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).SendString("User not found")
+		}
+
+		if err := models.UpdateUserRole(db, targetID, role); err != nil {
+			log.Printf("failed to update role for user %d: %v", targetID, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to update role")
+		}
+
+		models.LogActivityWithContext(db, "user", targetID, "role_changed",
+			"Role changed to "+role+" for user "+target.Username, c.IP(), c.Get("User-Agent"))
+
+		if c.Get("HX-Request") != "" {
+			c.Set("HX-Redirect", "/users")
 			return c.SendString("")
 		}
 		return c.Redirect("/users")

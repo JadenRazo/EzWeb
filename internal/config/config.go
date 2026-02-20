@@ -39,6 +39,7 @@ type Config struct {
 	SMTPUsername string
 	SMTPPassword string
 	AlertEmail   string
+	PublicDomainFilter string
 }
 
 func Load() (*Config, error) {
@@ -73,6 +74,7 @@ func Load() (*Config, error) {
 		SMTPUsername: getEnv("SMTP_USERNAME", ""),
 		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
 		AlertEmail:   getEnv("ALERT_EMAIL", ""),
+		PublicDomainFilter: getEnv("PUBLIC_DOMAIN_FILTER", ""),
 	}
 
 	if cfg.JWTSecret == "" {

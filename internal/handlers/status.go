@@ -15,7 +15,11 @@ import (
 // PublicStatus returns a JSON array of all site statuses with their latest
 // health check data. This endpoint is unauthenticated and intended for
 // external consumption (e.g. profile README deploy monitors).
-func PublicStatus(db *sql.DB) fiber.Handler {
+//
+// domainFilter controls which domains are shown verbatim. When empty, all
+// domains are masked. When set, only domains containing the filter string are
+// shown; all others are replaced with a generic placeholder.
+func PublicStatus(db *sql.DB, domainFilter string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		sites, err := models.GetAllSites(db)
 		if err != nil {
@@ -39,7 +43,9 @@ func PublicStatus(db *sql.DB) fiber.Handler {
 		hidden := 0
 		for _, site := range sites {
 			domain := site.Domain
-			if !strings.Contains(domain, "jadenrazo.dev") {
+			// Mask domain when no filter is set (hide everything) or when the
+			// domain does not match the configured filter string.
+			if domainFilter == "" || !strings.Contains(domain, domainFilter) {
 				hidden++
 				domain = fmt.Sprintf("client-site-%d.example", hidden)
 			}

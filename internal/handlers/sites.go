@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"html"
 	"log"
 	"regexp"
 	"strconv"
@@ -38,10 +39,10 @@ func ListSites(db *sql.DB) fiber.Handler {
 			page = 1
 		}
 
-		total, _ := models.CountSites(db)
-		offset := (page - 1) * perPage
+		searchQuery := strings.TrimSpace(c.Query("q", ""))
+		statusFilter := strings.TrimSpace(c.Query("status", ""))
 
-		sites, err := models.GetSitesPaginated(db, perPage, offset)
+		sites, total, err := models.SearchSites(db, searchQuery, statusFilter, page, perPage)
 		if err != nil {
 			log.Printf("failed to list sites: %v", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to load sites")
@@ -63,7 +64,7 @@ func ListSites(db *sql.DB) fiber.Handler {
 		}
 
 		c.Set("Content-Type", "text/html")
-		return pages.Sites(sites, servers, templates, customers, page, total, perPage).Render(c.Context(), c.Response().BodyWriter())
+		return pages.Sites(sites, servers, templates, customers, page, total, perPage, searchQuery, statusFilter).Render(c.Context(), c.Response().BodyWriter())
 	}
 }
 
@@ -610,18 +611,18 @@ func ListSiteEnvVars(db *sql.DB) fiber.Handler {
 			return c.SendString("<p class='text-sm text-gray-400'>No environment variables set.</p>")
 		}
 
-		html := "<div class='space-y-2'>"
+		out := "<div class='space-y-2'>"
 		for _, v := range vars {
-			html += "<div class='flex items-center justify-between p-2 bg-gray-50 rounded-lg'>"
-			html += "<div class='font-mono text-sm'><span class='font-semibold text-gray-700'>" + v.Key + "</span> = <span class='text-gray-500'>" + v.Value + "</span></div>"
-			html += "<button hx-delete='/sites/" + strconv.Itoa(id) + "/env/" + strconv.Itoa(v.ID) + "' hx-target='#env-list' hx-swap='innerHTML' hx-confirm='Delete this variable?' "
-			html += "class='px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-colors'>Remove</button>"
-			html += "</div>"
+			out += "<div class='flex items-center justify-between p-2 bg-gray-50 rounded-lg'>"
+			out += "<div class='font-mono text-sm'><span class='font-semibold text-gray-700'>" + html.EscapeString(v.Key) + "</span> = <span class='text-gray-500'>" + html.EscapeString(v.Value) + "</span></div>"
+			out += "<button hx-delete='/sites/" + strconv.Itoa(id) + "/env/" + strconv.Itoa(v.ID) + "' hx-target='#env-list' hx-swap='innerHTML' hx-confirm='Delete this variable?' "
+			out += "class='px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-colors'>Remove</button>"
+			out += "</div>"
 		}
-		html += "</div>"
+		out += "</div>"
 
 		c.Set("Content-Type", "text/html")
-		return c.SendString(html)
+		return c.SendString(out)
 	}
 }
 
