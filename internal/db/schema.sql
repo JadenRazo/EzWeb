@@ -122,6 +122,14 @@ CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, 
 CREATE INDEX IF NOT EXISTS idx_activity_log_entity_time ON activity_log(entity_type, entity_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sites_domain ON sites(domain);
 
+CREATE TABLE IF NOT EXISTS totp_used_codes (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code TEXT NOT NULL,
+    used_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, code)
+);
+CREATE INDEX IF NOT EXISTS idx_totp_used_codes_used_at ON totp_used_codes(used_at);
+
 -- Seed templates
 INSERT OR IGNORE INTO site_templates (slug, label, description) VALUES
     ('wordpress', 'WordPress', 'Full WordPress CMS with MySQL'),

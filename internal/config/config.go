@@ -41,6 +41,7 @@ type Config struct {
 	SMTPPassword string
 	AlertEmail   string
 	PublicDomainFilter string
+	TOTPIssuer        string
 }
 
 func Load() (*Config, error) {
@@ -77,6 +78,7 @@ func Load() (*Config, error) {
 		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
 		AlertEmail:   getEnv("ALERT_EMAIL", ""),
 		PublicDomainFilter: getEnv("PUBLIC_DOMAIN_FILTER", ""),
+		TOTPIssuer:        getEnv("TOTP_ISSUER", "EzWeb"),
 	}
 
 	if cfg.JWTSecret == "" {

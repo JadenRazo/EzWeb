@@ -9,22 +9,26 @@ import (
 )
 
 type User struct {
-	ID        int
-	Username  string
-	Password  string
-	Role      string
-	CreatedAt time.Time
+	ID          int
+	Username    string
+	Password    string
+	Role        string
+	TOTPSecret  string
+	TOTPEnabled bool
+	CreatedAt   time.Time
 }
 
 func GetUserByUsername(db *sql.DB, username string) (*User, error) {
 	user := &User{}
+	var totpSecret sql.NullString
 	err := db.QueryRow(
-		"SELECT id, username, password, COALESCE(role, 'admin'), created_at FROM users WHERE username = ?",
+		"SELECT id, username, password, COALESCE(role, 'admin'), COALESCE(totp_secret, ''), COALESCE(totp_enabled, 0), created_at FROM users WHERE username = ?",
 		username,
-	).Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.CreatedAt)
+	).Scan(&user.ID, &user.Username, &user.Password, &user.Role, &totpSecret, &user.TOTPEnabled, &user.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
+	user.TOTPSecret = totpSecret.String
 	return user, nil
 }
 
@@ -72,13 +76,15 @@ func UpdateUserRole(db *sql.DB, id int, role string) error {
 
 func GetUserByID(db *sql.DB, id int) (*User, error) {
 	user := &User{}
+	var totpSecret sql.NullString
 	err := db.QueryRow(
-		"SELECT id, username, password, COALESCE(role, 'admin'), created_at FROM users WHERE id = ?",
+		"SELECT id, username, password, COALESCE(role, 'admin'), COALESCE(totp_secret, ''), COALESCE(totp_enabled, 0), created_at FROM users WHERE id = ?",
 		id,
-	).Scan(&user.ID, &user.Username, &user.Password, &user.Role, &user.CreatedAt)
+	).Scan(&user.ID, &user.Username, &user.Password, &user.Role, &totpSecret, &user.TOTPEnabled, &user.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
+	user.TOTPSecret = totpSecret.String
 	return user, nil
 }
 
@@ -93,6 +99,45 @@ func UpdateUserPassword(db *sql.DB, id int, hashedPassword string) error {
 func DeleteUser(db *sql.DB, id int) error {
 	_, err := db.Exec("DELETE FROM users WHERE id = ?", id)
 	return err
+}
+
+func SetTOTPSecret(db *sql.DB, userID int, secret string) error {
+	_, err := db.Exec("UPDATE users SET totp_secret = ? WHERE id = ?", secret, userID)
+	return err
+}
+
+func EnableTOTP(db *sql.DB, userID int) error {
+	_, err := db.Exec("UPDATE users SET totp_enabled = 1 WHERE id = ?", userID)
+	return err
+}
+
+func DisableTOTP(db *sql.DB, userID int) error {
+	_, err := db.Exec("UPDATE users SET totp_enabled = 0, totp_secret = NULL WHERE id = ?", userID)
+	return err
+}
+
+func IsTOTPCodeUsed(db *sql.DB, userID int, code string) (bool, error) {
+	var count int
+	err := db.QueryRow(
+		"SELECT COUNT(*) FROM totp_used_codes WHERE user_id = ? AND code = ?",
+		userID, code,
+	).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func RecordTOTPCodeUsed(db *sql.DB, userID int, code string) error {
+	_, err := db.Exec(
+		"INSERT OR IGNORE INTO totp_used_codes (user_id, code) VALUES (?, ?)",
+		userID, code,
+	)
+	return err
+}
+
+func CleanupUsedTOTPCodes(db *sql.DB) {
+	db.Exec("DELETE FROM totp_used_codes WHERE used_at < ?", time.Now().Add(-2*time.Minute).UTC().Format(time.RFC3339))
 }
 
 // EnsureAdminExists creates the admin user if it doesn't exist, or updates

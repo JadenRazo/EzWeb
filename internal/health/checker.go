@@ -93,6 +93,8 @@ func (ch *Checker) checkAll() {
 	ch.DB.Exec("DELETE FROM activity_log WHERE created_at < ?", activityCutoff)
 	// Prune expired revoked tokens.
 	auth.CleanupExpiredTokens(ch.DB)
+	// Prune used TOTP codes older than 2 minutes.
+	models.CleanupUsedTOTPCodes(ch.DB)
 
 	sites, err := models.GetAllSites(ch.DB)
 	if err != nil {

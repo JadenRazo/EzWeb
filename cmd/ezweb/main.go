@@ -151,6 +151,8 @@ func main() {
 	// Public routes
 	app.Get("/login", handlers.LoginPage)
 	app.Post("/login", loginLimiter, handlers.LoginPost(database, cfg, lockout, userLockout))
+	app.Get("/login/2fa", handlers.TOTPVerifyPage)
+	app.Post("/login/2fa", loginLimiter, handlers.TOTPVerifyPost(database, cfg, lockout))
 	app.Get("/logout", handlers.Logout(cfg, database))
 
 	// Protected routes
@@ -182,6 +184,9 @@ func main() {
 	// Dashboard
 	protected.Get("/dashboard", handlers.Dashboard(database))
 
+	// 2FA settings
+	protected.Get("/settings/2fa", handlers.TOTPSetupPage(database, cfg))
+
 	// Read-only routes (any authenticated user)
 	protected.Get("/customers", handlers.ListCustomers(database))
 	protected.Get("/customers/:id/edit", handlers.EditCustomerForm(database))
@@ -210,6 +215,10 @@ func main() {
 
 	// Write routes (admin only via WriteProtect)
 	write := protected.Group("/", auth.WriteProtect())
+
+	// 2FA writes
+	write.Post("/settings/2fa/enable", handlers.TOTPEnable(database))
+	write.Post("/settings/2fa/disable", handlers.TOTPDisable(database, cfg))
 
 	// Customer writes
 	write.Post("/customers", handlers.CreateCustomer(database))

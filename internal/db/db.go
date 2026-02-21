@@ -66,6 +66,8 @@ func migrateSchema(db *sql.DB) error {
 		"ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'admin'",
 		"ALTER TABLE activity_log ADD COLUMN ip_address TEXT",
 		"ALTER TABLE activity_log ADD COLUMN user_agent TEXT",
+		"ALTER TABLE users ADD COLUMN totp_secret TEXT",
+		"ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0",
 	}
 	for _, stmt := range alterations {
 		if _, err := db.Exec(stmt); err != nil {
