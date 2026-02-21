@@ -3,12 +3,14 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"html"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"ezweb/internal/caddy"
 	"ezweb/internal/docker"
 	"ezweb/internal/models"
 	sshutil "ezweb/internal/ssh"
@@ -237,6 +239,138 @@ func DeleteServerHandler(db *sql.DB) fiber.Handler {
 			return c.SendString("")
 		}
 		return c.Redirect("/servers")
+	}
+}
+
+// ServerDetail renders the server detail page with resource stats, managed
+// sites, discovered Docker projects, and container list.
+func ServerDetail(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid server ID")
+		}
+
+		server, err := models.GetServerByID(db, id)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).SendString("Server not found")
+		}
+
+		sites, err := models.GetSitesByServerID(db, id)
+		if err != nil {
+			log.Printf("failed to get sites for server %d: %v", id, err)
+			sites = []models.Site{}
+		}
+
+		var stats docker.RemoteServerStats
+		var projects []docker.ScannedProject
+		var containers []docker.RemoteContainer
+
+		// Only fetch remote data if we have a host key (connection was tested).
+		if server.SSHHostKey != "" {
+			sshClient, sshErr := sshutil.NewClientWithHostKey(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey)
+			if sshErr == nil {
+				defer sshClient.Close()
+				stats, _ = docker.GetRemoteServerStats(sshClient)
+				projects, _ = docker.ScanRemoteProjects(sshClient)
+				containers, _ = docker.GetRemoteContainers(sshClient)
+			} else {
+				log.Printf("SSH connect for server detail %d failed: %v", id, sshErr)
+			}
+		}
+
+		c.Set("Content-Type", "text/html")
+		return pages.ServerDetailPage(*server, sites, stats, projects, containers).Render(c.Context(), c.Response().BodyWriter())
+	}
+}
+
+// DiscoverServerProjects scans a remote server for Docker Compose projects
+// and returns the results as an HTMX partial.
+func DiscoverServerProjects(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid server ID")
+		}
+
+		server, err := models.GetServerByID(db, id)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).SendString("Server not found")
+		}
+
+		if server.SSHHostKey == "" {
+			return c.Status(fiber.StatusBadRequest).SendString("Test the server connection first to establish SSH access")
+		}
+
+		sshClient, err := sshutil.NewClientWithHostKey(server.Host, server.SSHPort, server.SSHUser, server.SSHKeyPath, server.SSHHostKey)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("SSH connection failed: " + err.Error())
+		}
+		defer sshClient.Close()
+
+		projects, err := docker.ScanRemoteProjects(sshClient)
+		if err != nil {
+			log.Printf("remote project scan failed for server %d: %v", id, err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to scan remote projects")
+		}
+
+		c.Set("Content-Type", "text/html")
+		return pages.ServerDiscoveredProjects(id, projects).Render(c.Context(), c.Response().BodyWriter())
+	}
+}
+
+// ImportRemoteProject creates a new site from a discovered Docker project on
+// a remote server.
+func ImportRemoteProject(db *sql.DB, caddyMgr *caddy.Manager) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid server ID")
+		}
+
+		domain := strings.TrimSpace(c.FormValue("domain"))
+		composePath := strings.TrimSpace(c.FormValue("compose_path"))
+
+		if domain == "" || composePath == "" {
+			return c.Status(fiber.StatusBadRequest).SendString("Domain and compose path are required")
+		}
+		if !validateDomain(domain) {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid domain format")
+		}
+
+		server, err := models.GetServerByID(db, id)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).SendString("Server not found")
+		}
+
+		containerName := strings.ReplaceAll(domain, ".", "-")
+
+		site := &models.Site{
+			Domain:        domain,
+			ServerID:      sql.NullInt64{Int64: int64(server.ID), Valid: true},
+			ContainerName: containerName,
+			Status:        "running",
+			ComposePath:   composePath,
+		}
+
+		if err := models.CreateSite(db, site); err != nil {
+			log.Printf("failed to import remote project: %v", err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to import project")
+		}
+
+		models.LogActivityWithContext(db, "site", site.ID, "created", "Imported remote project "+domain+" from server "+server.Name, c.IP(), c.Get("User-Agent"))
+
+		if caddyMgr != nil {
+			if err := caddyMgr.AddSite(db, *site); err != nil {
+				log.Printf("caddy reload failed after importing %s: %v", domain, err)
+			}
+		}
+
+		if c.Get("HX-Request") != "" {
+			c.Set("Content-Type", "text/html")
+			return c.SendString(`<tr class="bg-green-50"><td colspan="4" class="px-6 py-3 text-sm text-green-700">Imported ` + html.EscapeString(domain) + ` successfully. <a href="/sites" class="underline font-medium">View sites</a></td></tr>`)
+		}
+		return c.Redirect("/servers/" + strconv.Itoa(id))
 	}
 }
 

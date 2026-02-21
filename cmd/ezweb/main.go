@@ -187,6 +187,7 @@ func main() {
 	protected.Get("/customers/:id/edit", handlers.EditCustomerForm(database))
 	protected.Get("/customers/:id/cancel", handlers.CancelEditCustomer(database))
 	protected.Get("/servers", handlers.ListServers(database))
+	protected.Get("/servers/:id", handlers.ServerDetail(database))
 	protected.Get("/servers/:id/edit", handlers.EditServerForm(database))
 	protected.Get("/servers/:id/row", handlers.CancelEditServer(database))
 	protected.Get("/sites", handlers.ListSites(database))
@@ -220,6 +221,8 @@ func main() {
 	write.Put("/servers/:id", handlers.UpdateServerHandler(database, cfg.SSHKeyDir))
 	write.Delete("/servers/:id", handlers.DeleteServerHandler(database))
 	write.Post("/servers/:id/test", handlers.TestServerConnection(database))
+	write.Post("/servers/:id/discover", handlers.DiscoverServerProjects(database))
+	write.Post("/servers/:id/import", handlers.ImportRemoteProject(database, caddyMgr))
 
 	// Site writes
 	write.Post("/sites/bulk", handlers.BulkSiteAction(database))
