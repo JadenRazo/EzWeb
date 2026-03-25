@@ -1,0 +1,11 @@
+.env
+ezweb.db
+ezweb.db-shm
+ezweb.db-wal
+/ezweb
+/ezweb-mcp
+/tmp/
+*.log
+node_modules/
+.claude/
+CLAUDE.md

@@ -1,0 +1,32 @@
+package partials
+
+import (
+	"ezweb/internal/models"
+	"strconv"
+)
+
+templ LogStream(logs string) {
+	<div class="bg-gray-900 rounded-lg p-4 overflow-x-auto max-h-96 overflow-y-auto">
+		<pre class="text-green-400 text-sm font-mono whitespace-pre-wrap">{ logs }</pre>
+	</div>
+}
+
+templ HealthChecks(checks []models.HealthCheck) {
+	<div class="space-y-2">
+		if len(checks) == 0 {
+			<p class="text-gray-500 text-sm">No health checks recorded yet.</p>
+		}
+		for _, check := range checks {
+			<div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg text-sm">
+				<span class="text-gray-600">{ check.CheckedAt }</span>
+				<span class={ "font-medium", templ.KV("text-green-600", check.HTTPStatus >= 200 && check.HTTPStatus < 300), templ.KV("text-red-600", check.HTTPStatus == 0 || check.HTTPStatus >= 400) }>
+					HTTP { strconv.Itoa(check.HTTPStatus) }
+				</span>
+				<span class="text-gray-500">{ strconv.Itoa(check.LatencyMs) }ms</span>
+				<span class={ "font-medium", templ.KV("text-green-600", check.ContainerStatus == "running"), templ.KV("text-red-600", check.ContainerStatus != "running") }>
+					{ check.ContainerStatus }
+				</span>
+			</div>
+		}
+	</div>
+}

@@ -1,0 +1,387 @@
+package main
+
+import (
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"ezweb/internal/auth"
+	"ezweb/internal/backup"
+	"ezweb/internal/caddy"
+	"ezweb/internal/config"
+	"ezweb/internal/db"
+	"ezweb/internal/domain"
+	"ezweb/internal/handlers"
+	"ezweb/internal/health"
+	"ezweb/internal/metrics"
+	"ezweb/internal/models"
+	"ezweb/internal/portal"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/csrf"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+)
+
+func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	database, err := db.Open(cfg.DBPath, cfg.DBMaxOpenConns, cfg.DBMaxIdleConns)
+	if err != nil {
+		log.Fatalf("Failed to open database: %v", err)
+	}
+	defer database.Close()
+
+	// Handle --backup CLI flag for use by the systemd backup timer.
+	if len(os.Args) > 1 && os.Args[1] == "--backup" {
+		mgr, err := backup.NewManager(cfg.BackupDir, database)
+		if err != nil {
+			log.Fatalf("Backup manager init failed: %v", err)
+		}
+		results, err := mgr.RunFullBackup(cfg.DBPath)
+		if err != nil {
+			log.Fatalf("Full backup failed: %v", err)
+		}
+		log.Printf("Backup complete: %d file(s)", len(results))
+		return
+	}
+
+	// Set bcrypt cost from config before any password hashing occurs
+	auth.BcryptCost = cfg.BcryptCost
+
+	// EnsureAdminExists hashes the password internally and updates the stored
+	// hash when the .env password has changed since the last run.
+	if err := models.EnsureAdminExists(database, cfg.AdminUser, cfg.AdminPass); err != nil {
+		log.Fatalf("Failed to ensure admin user: %v", err)
+	}
+
+	// Seed activity log for pre-existing entities (no-op if already populated)
+	models.BackfillActivities(database)
+
+	// Account lockout trackers — one keyed by IP, one by username
+	lockout := auth.NewLockoutTracker(cfg.LockoutMaxAttempts, time.Duration(cfg.LockoutDurationMin)*time.Minute)
+	userLockout := auth.NewLockoutTracker(cfg.LockoutMaxAttempts, time.Duration(cfg.LockoutDurationMin)*time.Minute)
+
+	// Backup manager
+	backupMgr, err := backup.NewManager(cfg.BackupDir, database)
+	if err != nil {
+		log.Fatalf("Failed to initialize backup manager: %v", err)
+	}
+
+	// Caddy manager
+	caddyMgr := caddy.NewManager(cfg.CaddyfilePath, cfg.AcmeEmail)
+
+	// Domain price comparison manager
+	domainMgr := domain.NewManager(database)
+
+	// Start background health checker
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	emailSender := health.NewEmailSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPFrom, cfg.AlertEmail, cfg.SMTPUsername, cfg.SMTPPassword)
+	checker := health.NewChecker(database, time.Duration(cfg.HealthCheckInterval)*time.Minute, cfg.WebhookURL, cfg.WebhookFormat, cfg.AlertThreshold, cfg.HealthRetentionDays, cfg.ActivityRetentionDays, emailSender)
+	go checker.Start(ctx)
+
+	app := fiber.New(fiber.Config{
+		// Trust X-Forwarded-For from local reverse proxies (e.g. Caddy) so
+		// the rate limiter sees the real client IP instead of 127.0.0.1.
+		ProxyHeader:    "X-Forwarded-For",
+		TrustedProxies: []string{"127.0.0.1", "::1"},
+
+		// Server-side timeouts.  WriteTimeout is generous to accommodate the
+		// SSE deploy stream, which can run for several minutes.
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 10 * time.Minute,
+		IdleTimeout:  60 * time.Second,
+
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			code := fiber.StatusInternalServerError
+			if e, ok := err.(*fiber.Error); ok {
+				code = e.Code
+			}
+			log.Printf("HTTP %d: %v", code, err)
+			return c.Status(code).SendString("An error occurred")
+		},
+	})
+
+	// Global middleware
+	app.Use(recover.New())
+
+	if cfg.CORSOrigins != "" {
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     cfg.CORSOrigins,
+			AllowMethods:     "GET,POST,OPTIONS",
+			AllowHeaders:     "Content-Type,X-API-Key",
+			AllowCredentials: false,
+		}))
+	}
+
+	app.Use(helmet.New(helmet.Config{
+		ContentSecurityPolicy:   "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self' chrome-extension: moz-extension: safari-extension:; frame-ancestors 'none'",
+		CrossOriginOpenerPolicy: "same-origin-allow-popups",
+	}))
+
+	// Metrics middleware (counts requests, tracks latency)
+	if cfg.MetricsEnabled {
+		app.Use(metrics.Middleware())
+	}
+
+	// Static files
+	app.Static("/static", "./static")
+
+	// Health probe — unauthenticated, before any auth middleware.
+	app.Get("/healthz", func(c *fiber.Ctx) error {
+		if err := database.Ping(); err != nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"status": "degraded",
+				"db":     "unreachable",
+			})
+		}
+		return c.JSON(fiber.Map{"status": "ok", "db": "connected"})
+	})
+
+	// Prometheus metrics endpoint (unauthenticated for scraping)
+	if cfg.MetricsEnabled {
+		app.Get("/metrics", metrics.Handler())
+	}
+
+	// Public status API (unauthenticated, for external dashboards)
+	app.Get("/api/status", handlers.PublicStatus(database, cfg.PublicDomainFilter))
+
+	// Rate limit on login
+	loginLimiter := limiter.New(limiter.Config{
+		Max:        10,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+	})
+
+	// Public routes
+	app.Get("/login", handlers.LoginPage)
+	app.Post("/login", loginLimiter, handlers.LoginPost(database, cfg, lockout, userLockout))
+	app.Get("/login/2fa", handlers.TOTPVerifyPage)
+	app.Post("/login/2fa", loginLimiter, handlers.TOTPVerifyPost(database, cfg, lockout))
+	app.Get("/logout", handlers.Logout(cfg, database))
+
+	// Public quote routes (no auth required)
+	app.Get("/q/:publicId", handlers.PublicQuote(database))
+	app.Post("/q/:publicId/accept", handlers.AcceptQuote(database))
+
+	// Public client portal routes (no admin auth required)
+	// Rate-limit the contact form submission to 5 per minute per IP.
+	portalContactLimiter := limiter.New(limiter.Config{
+		Max:        5,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+	})
+	app.Get("/portal", handlers.PortalHome(database))
+	app.Get("/portal/pricing", handlers.PortalPricing(database))
+	app.Get("/portal/portfolio", handlers.PortalPortfolio(database))
+	app.Get("/portal/contact", handlers.PortalContact(database))
+	app.Post("/portal/contact", portalContactLimiter, handlers.PortalContactSubmit(database))
+	// Public JSON API for inbound quote requests from external marketing sites.
+	quoteRequestLimiter := limiter.New(limiter.Config{
+		Max:        5,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+	})
+	apiKeyCheck := func(c *fiber.Ctx) error {
+		if cfg.APIKey != "" && c.Get("X-API-Key") != cfg.APIKey {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"success": false,
+				"error":   "Invalid or missing API key",
+			})
+		}
+		return c.Next()
+	}
+	app.Post("/quote-requests", quoteRequestLimiter, apiKeyCheck, handlers.CreateQuoteRequestAPI(database))
+
+	app.Get("/portal/login", handlers.PortalLogin(database))
+	app.Post("/portal/login", loginLimiter, handlers.PortalLoginSubmit(database))
+	app.Get("/portal/verify/:token", handlers.PortalVerifyToken(database))
+
+	// Authenticated client portal routes (client_token cookie required)
+	clientPortal := app.Group("/portal", portal.ClientAuthMiddleware(database))
+	clientPortal.Get("/dashboard", handlers.PortalDashboard(database))
+
+	// Protected routes
+	protected := app.Group("/", auth.AuthMiddleware(cfg.JWTSecret, database))
+
+	// General rate limiter for protected routes
+	protected.Use(limiter.New(limiter.Config{
+		Max:        60,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+	}))
+
+	// CSRF protection
+	//
+	// CookieHTTPOnly MUST remain false: the HTMX configRequest handler in
+	// base.templ reads the csrf_token cookie via document.cookie and copies
+	// it into the X-CSRF-Token request header (double-submit pattern).
+	protected.Use(csrf.New(csrf.Config{
+		KeyLookup:      "header:X-CSRF-Token",
+		CookieName:     "csrf_token",
+		CookieSameSite: "Lax",
+		CookieHTTPOnly: false,
+		CookieSecure:   cfg.SecureCookies,
+		Expiration:     1 * time.Hour,
+	}))
+
+	// Dashboard
+	protected.Get("/dashboard", handlers.Dashboard(database))
+
+	// 2FA settings
+	protected.Get("/settings/2fa", handlers.TOTPSetupPage(database, cfg))
+
+	// Read-only routes (any authenticated user)
+	protected.Get("/quotes", handlers.ListQuotes(database))
+	protected.Get("/quotes/:id", handlers.QuoteDetail(database))
+	protected.Get("/quotes/:id/pdf", handlers.QuotePDF(database))
+	protected.Get("/settings", handlers.SettingsPage(database))
+	protected.Get("/customers", handlers.ListCustomers(database))
+	protected.Get("/customers/:id/edit", handlers.EditCustomerForm(database))
+	protected.Get("/customers/:id/cancel", handlers.CancelEditCustomer(database))
+	protected.Get("/servers", handlers.ListServers(database))
+	protected.Get("/servers/:id", handlers.ServerDetail(database))
+	protected.Get("/servers/:id/edit", handlers.EditServerForm(database))
+	protected.Get("/servers/:id/row", handlers.CancelEditServer(database))
+	protected.Get("/sites", handlers.ListSites(database))
+	protected.Get("/sites/new", handlers.CreateSiteForm(database))
+	protected.Get("/sites/:id", handlers.SiteDetail(database))
+	protected.Get("/sites/:id/deploy/stream", handlers.DeploySSE(database))
+	protected.Get("/sites/:id/logs", handlers.GetSiteLogs(database))
+	protected.Get("/sites/:id/health", handlers.GetSiteHealth(database))
+	protected.Get("/sites/:id/env", handlers.ListSiteEnvVars(database))
+	protected.Get("/import", handlers.ImportPage())
+	protected.Get("/payments", handlers.ListPayments(database))
+	protected.Get("/payments/:id/edit", handlers.EditPaymentForm(database))
+	protected.Get("/payments/:id/row", handlers.CancelEditPayment(database))
+	protected.Get("/quote-requests", handlers.ListQuoteRequests(database))
+	protected.Get("/subscriptions", handlers.ListSubscriptions(database))
+	protected.Get("/export/sites", handlers.ExportSitesCSV(database))
+	protected.Get("/export/customers", handlers.ExportCustomersCSV(database))
+	protected.Get("/export/payments", handlers.ExportPaymentsCSV(database))
+	protected.Get("/backups", handlers.BackupsPage(backupMgr))
+	protected.Get("/backups/:name/download", handlers.DownloadBackup(backupMgr))
+	protected.Get("/api/templates", handlers.ListTemplates(database))
+	protected.Get("/domains", handlers.DomainsPage(database))
+	protected.Post("/domains/search", handlers.SearchDomains(domainMgr))
+	protected.Post("/api/domains/search", handlers.SearchDomainsJSON(domainMgr))
+
+	// Write routes (admin only via WriteProtect)
+	write := protected.Group("/", auth.WriteProtect())
+
+	// 2FA writes
+	write.Post("/settings/2fa/enable", handlers.TOTPEnable(database))
+	write.Post("/settings/2fa/disable", handlers.TOTPDisable(database, cfg))
+
+	// Quote writes
+	write.Post("/quotes", handlers.CreateQuote(database))
+	write.Put("/quotes/:id", handlers.UpdateQuote(database))
+	write.Delete("/quotes/:id", handlers.DeleteQuote(database))
+	write.Post("/quotes/:id/send", handlers.SendQuote(database))
+	write.Post("/quotes/:id/convert", handlers.ConvertQuote(database))
+
+	// Settings writes
+	write.Post("/settings", handlers.SaveSettings(database))
+	write.Post("/settings/logo", handlers.UploadLogo(database))
+
+	// Customer writes
+	write.Post("/customers", handlers.CreateCustomer(database))
+	write.Put("/customers/:id", handlers.UpdateCustomer(database))
+	write.Delete("/customers/:id", handlers.DeleteCustomer(database))
+
+	// Server writes
+	write.Post("/servers", handlers.CreateServerHandler(database, cfg.SSHKeyDir))
+	write.Put("/servers/:id", handlers.UpdateServerHandler(database, cfg.SSHKeyDir))
+	write.Delete("/servers/:id", handlers.DeleteServerHandler(database))
+	write.Post("/servers/:id/test", handlers.TestServerConnection(database))
+	write.Post("/servers/:id/discover", handlers.DiscoverServerProjects(database))
+	write.Post("/servers/:id/import", handlers.ImportRemoteProject(database, caddyMgr))
+
+	// Site writes
+	write.Post("/sites/bulk", handlers.BulkSiteAction(database))
+	write.Post("/sites", handlers.CreateSite(database, caddyMgr))
+	write.Put("/sites/:id", handlers.UpdateSite(database, caddyMgr))
+	write.Delete("/sites/:id", handlers.DeleteSite(database, caddyMgr))
+	write.Post("/sites/:id/deploy", handlers.DeploySite(database))
+	write.Post("/sites/:id/start", handlers.StartSite(database))
+	write.Post("/sites/:id/stop", handlers.StopSite(database))
+	write.Post("/sites/:id/restart", handlers.RestartSite(database))
+
+	// Site env var writes
+	write.Post("/sites/:id/env", handlers.CreateSiteEnvVar(database))
+	write.Delete("/sites/:id/env/:varId", handlers.DeleteSiteEnvVar(database))
+
+	// Import writes
+	write.Post("/import/scan", handlers.ScanProjects(database))
+	write.Post("/import", handlers.ImportProject(database, caddyMgr))
+
+	// Payment writes
+	write.Post("/payments", handlers.CreatePayment(database))
+	write.Put("/payments/:id", handlers.UpdatePayment(database))
+	write.Post("/payments/:id/mark-paid", handlers.MarkPaid(database))
+	write.Delete("/payments/:id", handlers.DeletePayment(database))
+
+	// Quote request writes (admin management of portal inbound leads)
+	write.Put("/quote-requests/:id/status", handlers.UpdateQuoteRequestStatus(database))
+	write.Post("/quote-requests/:id/convert", handlers.ConvertQuoteRequest(database))
+	write.Delete("/quote-requests/:id", handlers.DeleteQuoteRequest(database))
+
+	// Subscription writes
+	write.Post("/subscriptions", handlers.CreateSubscription(database))
+	write.Post("/subscriptions/:id/pause", handlers.PauseSubscription(database))
+	write.Post("/subscriptions/:id/resume", handlers.ResumeSubscription(database))
+	write.Post("/subscriptions/:id/cancel", handlers.CancelSubscription(database))
+	write.Delete("/subscriptions/:id", handlers.DeleteSubscription(database))
+
+	// Backup writes (admin only)
+	write.Post("/backups/database", handlers.CreateDatabaseBackup(backupMgr, cfg.DBPath))
+	write.Post("/backups/full", handlers.CreateFullBackup(backupMgr, cfg.DBPath))
+	write.Post("/sites/:id/backup", handlers.CreateSiteBackupHandler(backupMgr, func(id int) (*models.Site, error) {
+		return models.GetSiteByID(database, id)
+	}))
+	write.Delete("/backups/:name", handlers.DeleteBackup(backupMgr))
+	write.Post("/backups/:name/restore", handlers.RestoreBackup(backupMgr, cfg.DBPath))
+
+	// User management (admin only — extra AdminOnly guard)
+	adminOnly := protected.Group("/", auth.AdminOnly())
+	adminOnly.Get("/users", handlers.ListUsers(database))
+	adminOnly.Post("/users", handlers.CreateUser(database))
+	adminOnly.Delete("/users/:id", handlers.DeleteUserHandler(database))
+	adminOnly.Put("/users/:id/password", handlers.ChangePassword(database))
+	adminOnly.Put("/users/:id/role", handlers.UpdateUserRoleHandler(database))
+
+	// Redirect root to dashboard
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.Redirect("/dashboard")
+	})
+
+	// Graceful shutdown
+	go func() {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		<-sigChan
+		log.Println("Shutting down...")
+		cancel()
+		_ = app.Shutdown()
+	}()
+
+	log.Printf("EzWeb starting on port %s", cfg.Port)
+	log.Fatal(app.Listen(":" + cfg.Port))
+}

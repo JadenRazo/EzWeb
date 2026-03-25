@@ -1,0 +1,163 @@
+package pages
+
+import "ezweb/views/layouts"
+
+templ TOTPVerify(errMsg string) {
+	@layouts.Auth("Two-Factor Authentication") {
+		<style>
+			@keyframes gradientSlide {
+				0%   { transform: translateX(0); }
+				50%  { transform: translateX(-50%); }
+				100% { transform: translateX(0); }
+			}
+			.animated-bg-wrap {
+				position: fixed;
+				inset: 0;
+				z-index: -10;
+				overflow: hidden;
+			}
+			.animated-bg {
+				width: 400%;
+				height: 100%;
+				background: linear-gradient(
+					-45deg,
+					#0f172a 0%, #1e1b4b 15%, #0f172a 30%,
+					#1e3a5f 45%, #0f172a 60%, #1e1b4b 75%,
+					#0f172a 90%, #1e3a5f 100%
+				);
+				animation: gradientSlide 15s ease infinite;
+			}
+			.mesh-orb-1 {
+				position: fixed;
+				top: -10%;
+				left: -10%;
+				width: 50vw;
+				height: 50vw;
+				background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+				pointer-events: none;
+				z-index: -5;
+			}
+			.mesh-orb-2 {
+				position: fixed;
+				bottom: -10%;
+				right: -5%;
+				width: 45vw;
+				height: 45vw;
+				background: radial-gradient(circle, rgba(99,102,241,0.10) 0%, transparent 70%);
+				pointer-events: none;
+				z-index: -5;
+			}
+			.glass-card {
+				position: relative;
+				z-index: 10;
+				border: 1px solid rgba(255, 255, 255, 0.08);
+				box-shadow:
+					0 0 0 1px rgba(255,255,255,0.04),
+					0 25px 50px -12px rgba(0, 0, 0, 0.6),
+					0 0 80px rgba(59, 130, 246, 0.06);
+			}
+			.glass-card::before {
+				content: '';
+				position: absolute;
+				inset: 0;
+				z-index: -1;
+				border-radius: inherit;
+				background: rgba(255, 255, 255, 0.04);
+				backdrop-filter: blur(16px);
+				-webkit-backdrop-filter: blur(16px);
+			}
+			.input-glow {
+				overflow: visible;
+			}
+			.input-glow:focus-within {
+				box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.45);
+			}
+			.btn-signin {
+				background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+				transition: transform 0.15s ease, box-shadow 0.15s ease;
+			}
+			.btn-signin:hover {
+				transform: translateY(-1px) scale(1.01);
+				box-shadow: 0 8px 25px rgba(79, 70, 229, 0.45);
+			}
+			.btn-signin:active {
+				transform: translateY(0) scale(0.99);
+			}
+		</style>
+
+		<!-- Animated background -->
+		<div class="animated-bg-wrap">
+			<div class="animated-bg"></div>
+		</div>
+		<div class="mesh-orb-1"></div>
+		<div class="mesh-orb-2"></div>
+
+		<div class="w-full max-w-md px-4">
+			<!-- Brand header above card -->
+			<div class="text-center mb-8">
+				<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600/20 border border-blue-500/30 mb-4">
+					<svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+						<path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+					</svg>
+				</div>
+				<h1 class="text-3xl font-bold text-white tracking-tight">EzWeb</h1>
+				<p class="text-gray-400 mt-1 text-sm">Two-Factor Authentication</p>
+			</div>
+
+			<!-- Glass card -->
+			<div class="glass-card rounded-2xl p-8">
+				<div class="mb-6">
+					<h2 class="text-lg font-semibold text-white">Verify your identity</h2>
+					<p class="text-gray-400 text-sm mt-0.5">Enter the 6-digit code from your authenticator app</p>
+				</div>
+
+				if errMsg != "" {
+					<div class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-6 flex items-start gap-3">
+						<svg class="w-4 h-4 text-red-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+							<circle cx="12" cy="12" r="10"></circle>
+							<line x1="12" y1="8" x2="12" y2="12"></line>
+							<line x1="12" y1="16" x2="12.01" y2="16"></line>
+						</svg>
+						<p class="text-red-400 text-sm">{ errMsg }</p>
+					</div>
+				}
+
+				<form method="POST" action="/login/2fa" class="space-y-5" role="form">
+					<div>
+						<label for="code" class="block text-sm font-medium text-gray-300 mb-2">Verification Code</label>
+						<div class="relative input-glow rounded-xl transition-all duration-200">
+							<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none z-[1]">
+								<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+									<path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+								</svg>
+							</div>
+							<input
+								type="text"
+								id="code"
+								name="code"
+								autocomplete="one-time-code"
+								inputmode="numeric"
+								pattern="[0-9]{6}"
+								maxlength="6"
+								required
+								autofocus
+								class="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/60 focus:bg-white/8 transition-all duration-200 text-sm tracking-[0.3em] text-center font-mono text-lg"
+								placeholder="000000"
+							/>
+						</div>
+					</div>
+
+					<button type="submit" class="btn-signin w-full py-3 px-4 text-white font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-transparent mt-2">
+						Verify
+					</button>
+				</form>
+
+				<div class="mt-4 text-center">
+					<a href="/login" class="text-gray-400 hover:text-gray-300 text-sm transition-colors">Back to login</a>
+				</div>
+			</div>
+
+			<p class="text-center text-gray-600 text-xs mt-6">EzWeb &mdash; Self-hosted site management</p>
+		</div>
+	}
+}

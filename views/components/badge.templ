@@ -1,0 +1,44 @@
+package components
+
+func badgeClasses(color string) string {
+	switch color {
+	case "green":
+		return "bg-green-50 text-green-700 ring-1 ring-green-200/60"
+	case "red":
+		return "bg-red-50 text-red-700 ring-1 ring-red-200/60"
+	case "yellow":
+		return "bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200/60"
+	case "blue":
+		return "bg-blue-50 text-blue-700 ring-1 ring-blue-200/60"
+	case "purple":
+		return "bg-purple-50 text-purple-700 ring-1 ring-purple-200/60"
+	case "gray":
+		return "bg-gray-100 text-gray-600 ring-1 ring-gray-200/60"
+	default:
+		return "bg-gray-100 text-gray-600 ring-1 ring-gray-200/60"
+	}
+}
+
+func badgeDotColor(color string) string {
+	switch color {
+	case "green":
+		return "bg-green-500"
+	case "red":
+		return "bg-red-500"
+	case "yellow":
+		return "bg-yellow-500"
+	case "blue":
+		return "bg-blue-500"
+	case "purple":
+		return "bg-purple-500"
+	default:
+		return "bg-gray-400"
+	}
+}
+
+templ Badge(text string, color string) {
+	<span class={ "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap", badgeClasses(color) }>
+		<span class={ "w-1.5 h-1.5 rounded-full flex-shrink-0", badgeDotColor(color) }></span>
+		{ text }
+	</span>
+}

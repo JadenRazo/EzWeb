@@ -1,0 +1,10 @@
+[Unit]
+Description=Run EzWeb backup daily at 2am
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target

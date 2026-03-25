@@ -1,0 +1,80 @@
+package handlers
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"strings"
+	"time"
+
+	"ezweb/internal/models"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+// PublicStatus returns a JSON array of all site statuses with their latest
+// health check data. This endpoint is unauthenticated and intended for
+// external consumption (e.g. profile README deploy monitors).
+//
+// domainFilter controls which domains are shown verbatim. When empty, all
+// domains are masked. When set, only domains containing the filter string are
+// shown; all others are replaced with a generic placeholder.
+func PublicStatus(db *sql.DB, domainFilter string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		sites, err := models.GetAllSites(db)
+		if err != nil {
+			log.Printf("failed to list sites for public status: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to load site status",
+			})
+		}
+
+		type statusJSON struct {
+			Domain          string `json:"domain"`
+			Status          string `json:"status"`
+			Template        string `json:"template"`
+			HTTPStatus      int    `json:"http_status"`
+			LatencyMs       int    `json:"latency_ms"`
+			ContainerStatus string `json:"container_status"`
+			CheckedAt       string `json:"checked_at"`
+		}
+
+		// Batch-fetch latest health checks to avoid N+1 queries.
+		healthMap, err := models.GetLatestHealthChecks(db)
+		if err != nil {
+			log.Printf("failed to batch-load health checks: %v", err)
+			healthMap = make(map[int]*models.HealthCheck)
+		}
+
+		result := make([]statusJSON, 0, len(sites))
+		hidden := 0
+		for _, site := range sites {
+			domain := site.Domain
+			// Mask domain when no filter is set (hide everything) or when the
+			// domain does not match the configured filter string.
+			if domainFilter == "" || !strings.Contains(domain, domainFilter) {
+				hidden++
+				domain = fmt.Sprintf("client-site-%d.example", hidden)
+			}
+
+			entry := statusJSON{
+				Domain:   domain,
+				Status:   site.Status,
+				Template: site.TemplateSlug,
+			}
+
+			if hc, ok := healthMap[site.ID]; ok {
+				entry.HTTPStatus = hc.HTTPStatus
+				entry.LatencyMs = hc.LatencyMs
+				entry.ContainerStatus = hc.ContainerStatus
+				entry.CheckedAt = hc.CheckedAt
+			}
+
+			result = append(result, entry)
+		}
+
+		c.Set("Cache-Control", "public, max-age=300")
+		c.Set("Last-Modified", time.Now().UTC().Format(time.RFC1123))
+		return c.JSON(result)
+	}
+}
