@@ -4,7 +4,7 @@ services:
     container_name: ezweb
     restart: unless-stopped
     ports:
-      - "3003:8088"
+      - "127.0.0.1:3003:8088"
     volumes:
       - ezweb-data:/app/data
       - ezweb-backups:/app/backups
