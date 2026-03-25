@@ -1,0 +1,45 @@
+services:
+  ghost:
+    image: ghost:5-alpine
+    container_name: "{{.ContainerName}}"
+    restart: unless-stopped
+    ports:
+      - "{{.Port}}:2368"
+    environment:
+      url: "http://{{.Domain}}"
+      database__client: mysql
+      database__connection__host: "{{.ContainerName}}-db"
+      database__connection__user: ghost
+      database__connection__password: "{{.DBPassword}}"
+      database__connection__database: ghost
+    volumes:
+      - "{{.ContainerName}}-data:/var/lib/ghost/content"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:2368/ghost/api/v4/admin/site/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+  db:
+    image: mysql:8.4
+    container_name: "{{.ContainerName}}-db"
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ghost
+      MYSQL_USER: ghost
+      MYSQL_PASSWORD: "{{.DBPassword}}"
+      MYSQL_ROOT_PASSWORD: "{{.DBRootPassword}}"
+    volumes:
+      - "{{.ContainerName}}-dbdata:/var/lib/mysql"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "ghost", "--password={{.DBPassword}}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+volumes:
+  {{.ContainerName}}-data:
+  {{.ContainerName}}-dbdata:

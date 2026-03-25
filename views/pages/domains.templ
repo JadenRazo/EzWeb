@@ -1,0 +1,130 @@
+package pages
+
+import (
+	"ezweb/internal/domain"
+	"ezweb/views/components"
+	"ezweb/views/layouts"
+	"ezweb/views/partials"
+)
+
+templ Domains(results []domain.DomainResult, query string) {
+	@layouts.Base("Domain Search") {
+		<div class="flex min-h-screen bg-gray-50">
+			@components.Navbar("/domains")
+			<main class="flex-1 p-6 lg:p-10 pt-16 lg:pt-10">
+
+				<!-- Page header -->
+				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+					<div>
+						<h2 class="text-2xl font-bold text-gray-900">Domain Search</h2>
+						<p class="text-sm text-gray-500 mt-1">Check availability and compare prices across registrars</p>
+					</div>
+				</div>
+
+				<!-- Search card -->
+				<div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6">
+					<div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 rounded-t-2xl">
+						<h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Search a Domain</h3>
+					</div>
+					<div class="p-6">
+						<form
+							hx-post="/domains/search"
+							hx-target="#domain-results"
+							hx-swap="innerHTML"
+							hx-indicator="#search-indicator"
+							class="flex flex-col sm:flex-row gap-3"
+						>
+							<div class="relative flex-1">
+								<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+										<circle cx="12" cy="12" r="10"></circle>
+										<line x1="2" y1="12" x2="22" y2="12"></line>
+										<path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+									</svg>
+								</div>
+								<input
+									type="text"
+									name="domain"
+									value={ query }
+									placeholder="e.g. mycompany.com"
+									autofocus
+									autocomplete="off"
+									class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+								/>
+							</div>
+							<button
+								type="submit"
+								class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-150 shrink-0"
+							>
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+									<circle cx="11" cy="11" r="8"></circle>
+									<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+								</svg>
+								Search
+							</button>
+						</form>
+						<p class="mt-2 text-xs text-gray-400">
+							Enter a full domain name including extension, e.g. <span class="font-mono">example.com</span>.
+							Prices are fetched live from configured registrars.
+						</p>
+					</div>
+				</div>
+
+				<!-- Loading indicator -->
+				<div id="search-indicator" class="htmx-indicator mb-4 flex items-center gap-3 px-5 py-3 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
+					<svg class="animate-spin w-4 h-4 text-blue-500 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+					</svg>
+					Checking availability across registrars...
+				</div>
+
+				<!-- Results area -->
+				<div
+					id="domain-results"
+					class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+					x-data="{}"
+					@domain-selected.window="
+						const ev = $event.detail;
+						document.getElementById('quote-domain-name') && (document.getElementById('quote-domain-name').value = ev.domain);
+						document.getElementById('quote-domain-registrar') && (document.getElementById('quote-domain-registrar').value = ev.provider);
+						document.getElementById('quote-domain-price') && (document.getElementById('quote-domain-price').value = ev.price.toFixed(2));
+					"
+				>
+					if len(results) > 0 {
+						@partials.DomainResults(results, query)
+					} else if query != "" {
+						@partials.DomainResults(nil, query)
+					} else {
+						<!-- Placeholder shown before any search is run -->
+						<div class="py-16 flex flex-col items-center justify-center text-center">
+							<div class="w-14 h-14 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center mb-4">
+								<svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+									<circle cx="11" cy="11" r="8"></circle>
+									<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+								</svg>
+							</div>
+							<p class="text-sm font-semibold text-gray-700 mb-1">Search for a domain to get started</p>
+							<p class="text-xs text-gray-400 max-w-xs leading-relaxed">
+								Enter a domain name above and we will check availability and pricing from all configured registrars simultaneously.
+							</p>
+						</div>
+					}
+				</div>
+
+				<!-- Info card about estimates -->
+				<div class="mt-4 flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-700">
+					<svg class="w-4 h-4 shrink-0 mt-0.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+					</svg>
+					<p>
+						Results labelled <span class="font-semibold">Estimate</span> use static pricing and cannot check live availability.
+						Configure registrar API keys in your <span class="font-mono">.env</span> file to enable live lookups
+						(<span class="font-mono">CLOUDFLARE_API_TOKEN</span>, <span class="font-mono">NAMECHEAP_API_KEY</span>, or <span class="font-mono">PORKBUN_API_KEY</span>).
+					</p>
+				</div>
+
+			</main>
+		</div>
+	}
+}

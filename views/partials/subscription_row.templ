@@ -1,0 +1,104 @@
+package partials
+
+import (
+	"ezweb/internal/models"
+	"ezweb/views/components"
+	"fmt"
+)
+
+func subStatusColor(status string) string {
+	switch status {
+	case "active":
+		return "green"
+	case "paused":
+		return "yellow"
+	case "cancelled":
+		return "gray"
+	default:
+		return "gray"
+	}
+}
+
+func subCycleLabel(cycle string) string {
+	if cycle == "yearly" {
+		return "Yearly"
+	}
+	return "Monthly"
+}
+
+templ SubscriptionRow(sub models.Subscription) {
+	<tr id={ fmt.Sprintf("sub-%d", sub.ID) } class="border-b border-gray-100 hover:bg-gray-50/80 transition-colors duration-100">
+		<td class="px-6 py-4 text-sm font-medium text-gray-900">{ sub.CustomerName }</td>
+		<td class="px-6 py-4 text-sm text-gray-600">
+			if sub.SiteDomain != "" {
+				{ sub.SiteDomain }
+			} else {
+				<span class="text-gray-300">—</span>
+			}
+		</td>
+		<td class="px-6 py-4 text-sm font-semibold text-gray-900">{ fmt.Sprintf("$%.2f", sub.Amount) }</td>
+		<td class="px-6 py-4 text-sm text-gray-600">{ subCycleLabel(sub.BillingCycle) }</td>
+		<td class="px-6 py-4 text-sm text-gray-600">{ sub.NextDueDate }</td>
+		<td class="px-6 py-4">
+			@components.Badge(sub.Status, subStatusColor(sub.Status))
+		</td>
+		<td class="px-6 py-4">
+			<div class="flex items-center justify-end gap-1.5">
+				if sub.Status == "active" {
+					<button
+						hx-post={ fmt.Sprintf("/subscriptions/%d/pause", sub.ID) }
+						hx-target={ fmt.Sprintf("#sub-%d", sub.ID) }
+						hx-swap="outerHTML"
+						hx-confirm="Pause this subscription?"
+						class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 rounded-md transition-colors"
+					>
+						<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+							<rect x="6" y="4" width="4" height="16"></rect>
+							<rect x="14" y="4" width="4" height="16"></rect>
+						</svg>
+						Pause
+					</button>
+				}
+				if sub.Status == "paused" {
+					<button
+						hx-post={ fmt.Sprintf("/subscriptions/%d/resume", sub.ID) }
+						hx-target={ fmt.Sprintf("#sub-%d", sub.ID) }
+						hx-swap="outerHTML"
+						class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 rounded-md transition-colors"
+					>
+						<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+							<polygon points="5 3 19 12 5 21 5 3"></polygon>
+						</svg>
+						Resume
+					</button>
+				}
+				if sub.Status != "cancelled" {
+					<button
+						hx-post={ fmt.Sprintf("/subscriptions/%d/cancel", sub.ID) }
+						hx-target={ fmt.Sprintf("#sub-%d", sub.ID) }
+						hx-swap="outerHTML"
+						hx-confirm="Cancel this subscription? The record will be kept but billing will stop."
+						class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200 rounded-md transition-colors"
+					>
+						<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+						</svg>
+						Cancel
+					</button>
+				}
+				<button
+					hx-delete={ fmt.Sprintf("/subscriptions/%d", sub.ID) }
+					hx-target={ fmt.Sprintf("#sub-%d", sub.ID) }
+					hx-swap="outerHTML"
+					hx-confirm="Delete this subscription record permanently?"
+					class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-md transition-colors"
+				>
+					<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+					</svg>
+					Delete
+				</button>
+			</div>
+		</td>
+	</tr>
+}

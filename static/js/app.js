@@ -1,0 +1,247 @@
+// EzWeb client-side utilities
+
+// ── Modal system (native <dialog> API) ──────────────────────────────
+var EzModal = (function() {
+    function open(id) {
+        var el = document.getElementById('modal-' + id);
+        if (!el || typeof el.showModal !== 'function') return;
+        if (!el.open) el.showModal();
+    }
+
+    function close() {
+        var openDialog = document.querySelector('dialog[open]');
+        if (openDialog) openDialog.close();
+    }
+
+    // Delegated click: open triggers + backdrop click-to-close + overlay close
+    document.addEventListener('click', function(e) {
+        var openBtn = e.target.closest('[data-modal-open]');
+        if (openBtn) {
+            var id = openBtn.getAttribute('data-modal-open');
+            if (id) open(id);
+            return;
+        }
+
+        var overlayClose = e.target.closest('[data-close-overlay]');
+        if (overlayClose) {
+            var oid = overlayClose.getAttribute('data-close-overlay');
+            var oel = document.getElementById(oid);
+            if (oel) {
+                oel.classList.add('is-hidden');
+            }
+        }
+    });
+
+    // Close on backdrop click (clicking the <dialog> element itself, not its children)
+    document.addEventListener('click', function(e) {
+        if (e.target.tagName === 'DIALOG' && e.target.open) {
+            var rect = e.target.querySelector('.bg-white');
+            if (rect) {
+                var r = rect.getBoundingClientRect();
+                if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
+                    e.target.close();
+                }
+            }
+        }
+    });
+
+    return { open: open, close: close };
+})();
+
+
+// ── Toast notification system ───────────────────────────────────────
+(function() {
+    var container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'fixed top-4 right-4 z-[60] flex flex-col gap-2';
+    container.style.cssText = 'pointer-events: none;';
+    document.body.appendChild(container);
+
+    var icons = {
+        success: '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+        error: '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+        warning: '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>',
+        info: '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+    };
+
+    window.showToast = function(message, type) {
+        type = type || 'info';
+        var colors = {
+            success: 'bg-green-600',
+            error: 'bg-red-600',
+            warning: 'bg-yellow-500 text-black',
+            info: 'bg-blue-600'
+        };
+
+        var toast = document.createElement('div');
+        toast.className = 'toast-item flex items-center gap-2.5 px-4 py-3 rounded-xl text-white shadow-lg text-sm max-w-sm pointer-events-auto ' + (colors[type] || colors.info);
+        toast.innerHTML = (icons[type] || '') + '<span>' + message + '</span>';
+        container.appendChild(toast);
+
+        setTimeout(function() {
+            toast.style.transition = 'opacity 0.4s, transform 0.4s';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(function() { toast.remove(); }, 400);
+        }, 4000);
+    };
+})();
+
+// ── Auto-dismiss alerts ─────────────────────────────────────────────
+document.addEventListener('htmx:afterSwap', function(event) {
+    var alerts = event.detail.target.querySelectorAll('[data-auto-dismiss]');
+    alerts.forEach(function(alert) {
+        setTimeout(function() {
+            alert.style.transition = 'opacity 0.5s, transform 0.3s';
+            alert.style.opacity = '0';
+            alert.style.transform = 'translateY(-4px)';
+            setTimeout(function() { alert.remove(); }, 500);
+        }, 5000);
+    });
+});
+
+// ── Global HTMX error handlers ─────────────────────────────────────
+document.addEventListener('htmx:responseError', function(event) {
+    var status = event.detail.xhr ? event.detail.xhr.status : 0;
+    if (status === 401) {
+        window.location.href = '/login';
+        return;
+    }
+    var msg = event.detail.xhr ? event.detail.xhr.responseText : 'Request failed';
+    if (msg.length > 100) msg = 'An error occurred';
+    showToast(msg, 'error');
+});
+
+document.addEventListener('htmx:sendError', function() {
+    showToast('Network error — check your connection', 'error');
+});
+
+// ── Dark mode toggle ────────────────────────────────────────────────
+(function() {
+    var stored = localStorage.getItem('theme');
+    if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+    }
+
+    window.toggleDarkMode = function() {
+        var isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    };
+})();
+
+// ── Keyboard shortcuts ──────────────────────────────────────────────
+(function() {
+    // Cleanup legacy keys
+    localStorage.removeItem('shortcuts-dismissed');
+    localStorage.removeItem('shortcuts-visible');
+
+    var pendingKey = null;
+
+    function isSnoozed() {
+        var until = localStorage.getItem('shortcuts-snoozed-until');
+        if (!until) return false;
+        if (Date.now() < parseInt(until, 10)) return true;
+        localStorage.removeItem('shortcuts-snoozed-until');
+        return false;
+    }
+
+    function showOverlay() {
+        var overlay = document.getElementById('shortcuts-overlay');
+        if (overlay) overlay.classList.remove('is-hidden');
+    }
+
+    function hideOverlay() {
+        var overlay = document.getElementById('shortcuts-overlay');
+        if (overlay) overlay.classList.add('is-hidden');
+    }
+
+    function snoozeOverlay() {
+        localStorage.setItem('shortcuts-snoozed-until', String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+        hideOverlay();
+    }
+
+    // Show only once per fresh browser session (new tab / window), not on every page change
+    function showOncePerSession() {
+        if (sessionStorage.getItem('shortcuts-shown')) return;
+        if (isSnoozed()) return;
+        sessionStorage.setItem('shortcuts-shown', '1');
+        showOverlay();
+    }
+
+    // On initial page load, maybe show the overlay
+    showOncePerSession();
+
+    // Backdrop click — close only when clicking the overlay itself, not the panel
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'shortcuts-overlay') {
+            hideOverlay();
+        }
+        // "Don't show for a week" button
+        if (e.target.closest('[data-snooze-shortcuts]')) {
+            snoozeOverlay();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        // Don't trigger when typing in inputs
+        var tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) {
+            return;
+        }
+
+        // Ctrl+K or Cmd+K — focus search (if exists)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            var search = document.querySelector('[data-search]');
+            if (search) search.focus();
+            return;
+        }
+
+        // ? — toggle shortcuts help
+        if (e.key === '?') {
+            var overlay = document.getElementById('shortcuts-overlay');
+            if (overlay && !overlay.classList.contains('is-hidden')) {
+                hideOverlay();
+            } else {
+                showOverlay();
+            }
+            return;
+        }
+
+        // Escape — close modals/overlays
+        if (e.key === 'Escape') {
+            var overlay = document.getElementById('shortcuts-overlay');
+            if (overlay && !overlay.classList.contains('is-hidden')) {
+                hideOverlay();
+                return;
+            }
+            EzModal.close();
+            return;
+        }
+
+        // Two-key sequences: g + <key>
+        if (pendingKey === 'g') {
+            pendingKey = null;
+            switch (e.key) {
+                case 'd': htmx.ajax('GET', '/dashboard', {target:'body', swap:'innerHTML'}); break;
+                case 's': htmx.ajax('GET', '/sites', {target:'body', swap:'innerHTML'}); break;
+                case 'c': htmx.ajax('GET', '/customers', {target:'body', swap:'innerHTML'}); break;
+                case 'p': htmx.ajax('GET', '/payments', {target:'body', swap:'innerHTML'}); break;
+                case 'v': htmx.ajax('GET', '/servers', {target:'body', swap:'innerHTML'}); break;
+                case 'b': htmx.ajax('GET', '/backups', {target:'body', swap:'innerHTML'}); break;
+            }
+            return;
+        }
+
+        if (e.key === 'g') {
+            pendingKey = 'g';
+            setTimeout(function() { pendingKey = null; }, 800);
+            return;
+        }
+    });
+})();
+
+// ── CSV export helper ───────────────────────────────────────────────
+window.exportCSV = function(url) {
+    window.location.href = url;
+};

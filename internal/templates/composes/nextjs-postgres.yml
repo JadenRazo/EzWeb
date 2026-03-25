@@ -1,0 +1,46 @@
+services:
+  {{.ContainerName}}-app:
+    image: node:22-alpine
+    container_name: {{.ContainerName}}-app
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "{{.Port}}:3000"
+    depends_on:
+      {{.ContainerName}}-db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://appuser:{{.DBPassword}}@{{.ContainerName}}-db:5432/appdb
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      - {{.ContainerName}}-data:/app
+      - {{.ContainerName}}-uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  {{.ContainerName}}-db:
+    image: postgres:17-alpine
+    container_name: {{.ContainerName}}-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=appuser
+      - POSTGRES_PASSWORD={{.DBPassword}}
+      - POSTGRES_DB=appdb
+    volumes:
+      - {{.ContainerName}}-dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d appdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  {{.ContainerName}}-data:
+  {{.ContainerName}}-uploads:
+  {{.ContainerName}}-dbdata:

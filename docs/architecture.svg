@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#161b22"/>
+    </linearGradient>
+    <marker id="arrowGreen" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto"><path d="M0,0 L12,5 L0,10 L3,5Z" fill="#4ade80"/></marker>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto"><path d="M0,0 L12,5 L0,10 L3,5Z" fill="#60a5fa"/></marker>
+    <marker id="arrowAmber" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto"><path d="M0,0 L12,5 L0,10 L3,5Z" fill="#fbbf24"/></marker>
+    <marker id="arrowCyan" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto"><path d="M0,0 L12,5 L0,10 L3,5Z" fill="#22d3ee"/></marker>
+    <marker id="arrowPurple" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto"><path d="M0,0 L12,5 L0,10 L3,5Z" fill="#c084fc"/></marker>
+  </defs>
+
+  <rect width="1200" height="900" rx="12" fill="url(#bgGrad)"/>
+
+  <text x="600" y="42" text-anchor="middle" fill="#f0f6fc" font-size="26" font-weight="700">EzWeb Architecture</text>
+  <text x="600" y="68" text-anchor="middle" fill="#9198a1" font-size="14">Go + Fiber — Templ SSR — HTMX + Alpine.js — SQLite — Docker via SSH</text>
+
+  <!-- ═══ Dashboard UI ═══ -->
+  <rect x="30" y="90" width="1140" height="160" rx="12" fill="#1c2333" stroke="#60a5fa" stroke-width="2"/>
+  <text x="600" y="118" text-anchor="middle" fill="#93c5fd" font-size="18" font-weight="700">Dashboard UI (Templ + HTMX)</text>
+
+  <rect x="50" y="132" width="350" height="100" rx="8" fill="#0d1b2a" stroke="#60a5fa" stroke-width="1.2"/>
+  <text x="225" y="156" text-anchor="middle" fill="#93c5fd" font-size="14" font-weight="600">Pages</text>
+  <text x="70" y="178" fill="#c9d1d9" font-size="12">Dashboard / Sites / Site Detail</text>
+  <text x="70" y="198" fill="#c9d1d9" font-size="12">Servers / Customers / Payments</text>
+  <text x="70" y="218" fill="#c9d1d9" font-size="12">Backups / Users / Import / Login</text>
+
+  <rect x="420" y="132" width="350" height="100" rx="8" fill="#0d1b2a" stroke="#60a5fa" stroke-width="1.2"/>
+  <text x="595" y="156" text-anchor="middle" fill="#93c5fd" font-size="14" font-weight="600">Components</text>
+  <text x="440" y="178" fill="#c9d1d9" font-size="12">Navbar / Modal / Alert / Badge</text>
+  <text x="440" y="198" fill="#c9d1d9" font-size="12">Card / Table / Partials (rows)</text>
+  <text x="440" y="218" fill="#c9d1d9" font-size="12">Log stream / Deploy SSE viewer</text>
+
+  <rect x="790" y="132" width="370" height="100" rx="8" fill="#0d1b2a" stroke="#60a5fa" stroke-width="1.2"/>
+  <text x="975" y="156" text-anchor="middle" fill="#93c5fd" font-size="14" font-weight="600">Frontend Tech</text>
+  <text x="810" y="178" fill="#c9d1d9" font-size="12">HTMX partial swaps (no full reloads)</text>
+  <text x="810" y="198" fill="#c9d1d9" font-size="12">Alpine.js reactive state</text>
+  <text x="810" y="218" fill="#c9d1d9" font-size="12">Tailwind CSS (CDN)</text>
+
+  <path d="M600,250 L600,280" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrowAmber)" fill="none"/>
+
+  <!-- ═══ Go Backend ═══ -->
+  <rect x="30" y="280" width="1140" height="200" rx="12" fill="#1c2333" stroke="#22d3ee" stroke-width="2"/>
+  <text x="600" y="308" text-anchor="middle" fill="#67e8f9" font-size="18" font-weight="700">Go Backend (Fiber v2)</text>
+
+  <rect x="50" y="322" width="350" height="140" rx="8" fill="#0e2a32" stroke="#22d3ee" stroke-width="1.2"/>
+  <text x="225" y="346" text-anchor="middle" fill="#67e8f9" font-size="14" font-weight="600">Route Handlers</text>
+  <text x="70" y="368" fill="#c9d1d9" font-size="12">Sites CRUD + deploy SSE stream</text>
+  <text x="70" y="388" fill="#c9d1d9" font-size="12">Servers CRUD (SSH key management)</text>
+  <text x="70" y="408" fill="#c9d1d9" font-size="12">Customers / Payments / Invoices</text>
+  <text x="70" y="428" fill="#c9d1d9" font-size="12">Backups / Users / Import / Health</text>
+  <text x="70" y="448" fill="#c9d1d9" font-size="12">Prometheus metrics (/metrics)</text>
+
+  <rect x="420" y="322" width="350" height="140" rx="8" fill="#0e2a32" stroke="#c084fc" stroke-width="1.2"/>
+  <text x="595" y="346" text-anchor="middle" fill="#d8b4fe" font-size="14" font-weight="600">Auth &amp; Middleware</text>
+  <text x="440" y="368" fill="#c9d1d9" font-size="12">JWT tokens (HttpOnly cookies)</text>
+  <text x="440" y="388" fill="#c9d1d9" font-size="12">bcrypt password hashing</text>
+  <text x="440" y="408" fill="#c9d1d9" font-size="12">Admin-only route guard</text>
+  <text x="440" y="428" fill="#c9d1d9" font-size="12">Metrics middleware (request counting)</text>
+  <text x="440" y="448" fill="#c9d1d9" font-size="12">Secure cookie settings</text>
+
+  <rect x="790" y="322" width="370" height="140" rx="8" fill="#0e2a32" stroke="#fbbf24" stroke-width="1.2"/>
+  <text x="975" y="346" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="600">Deploy Engine</text>
+  <text x="810" y="368" fill="#c9d1d9" font-size="12">Local: docker compose up</text>
+  <text x="810" y="388" fill="#c9d1d9" font-size="12">Remote: SSH exec to target server</text>
+  <text x="810" y="408" fill="#c9d1d9" font-size="12">SSE streaming deploy progress</text>
+  <text x="810" y="428" fill="#c9d1d9" font-size="12">Embedded compose templates (go:embed)</text>
+  <text x="810" y="448" fill="#c9d1d9" font-size="12">WordPress, Ghost, Node.js, static</text>
+
+  <path d="M300,480 L300,510" stroke="#c084fc" stroke-width="3" marker-end="url(#arrowPurple)" fill="none"/>
+  <path d="M900,480 L900,510" stroke="#c084fc" stroke-width="3" marker-end="url(#arrowPurple)" fill="none"/>
+
+  <!-- ═══ External Integrations ═══ -->
+  <rect x="30" y="510" width="1140" height="100" rx="12" fill="#1c2333" stroke="#c084fc" stroke-width="2"/>
+  <text x="600" y="538" text-anchor="middle" fill="#d8b4fe" font-size="18" font-weight="700">External Integrations</text>
+
+  <rect x="50" y="554" width="340" height="42" rx="8" fill="#2d1f3d" stroke="#c084fc" stroke-width="1.2"/>
+  <text x="220" y="581" text-anchor="middle" fill="#d8b4fe" font-size="13" font-weight="600">Caddy Admin API (SSH tunnel)</text>
+
+  <rect x="410" y="554" width="340" height="42" rx="8" fill="#2d1f3d" stroke="#c084fc" stroke-width="1.2"/>
+  <text x="580" y="581" text-anchor="middle" fill="#d8b4fe" font-size="13" font-weight="600">Docker (SSH exec / local compose)</text>
+
+  <rect x="770" y="554" width="390" height="42" rx="8" fill="#2d1f3d" stroke="#c084fc" stroke-width="1.2"/>
+  <text x="965" y="581" text-anchor="middle" fill="#d8b4fe" font-size="13" font-weight="600">Remote VPS Servers (key-based SSH)</text>
+
+  <path d="M300,610 L300,640" stroke="#4ade80" stroke-width="3" marker-end="url(#arrowGreen)" fill="none"/>
+  <path d="M900,610 L900,640" stroke="#4ade80" stroke-width="3" marker-end="url(#arrowGreen)" fill="none"/>
+
+  <!-- ═══ Data Layer ═══ -->
+  <rect x="30" y="640" width="1140" height="100" rx="12" fill="#1c2333" stroke="#4ade80" stroke-width="2"/>
+  <text x="600" y="668" text-anchor="middle" fill="#4ade80" font-size="18" font-weight="700">Data Layer</text>
+
+  <rect x="50" y="684" width="340" height="42" rx="8" fill="#1a2e1a" stroke="#4ade80" stroke-width="1.2"/>
+  <text x="220" y="706" text-anchor="middle" fill="#86efac" font-size="14" font-weight="600">SQLite (pure Go, zero CGO)</text>
+  <text x="220" y="720" text-anchor="middle" fill="#9198a1" font-size="11">sites, servers, customers, payments, logs</text>
+
+  <rect x="410" y="684" width="340" height="42" rx="8" fill="#1a2e1a" stroke="#4ade80" stroke-width="1.2"/>
+  <text x="580" y="706" text-anchor="middle" fill="#86efac" font-size="14" font-weight="600">Filesystem</text>
+  <text x="580" y="720" text-anchor="middle" fill="#9198a1" font-size="11">SSH keys, backups, static assets</text>
+
+  <rect x="770" y="684" width="390" height="42" rx="8" fill="#1a2e1a" stroke="#4ade80" stroke-width="1.2"/>
+  <text x="965" y="706" text-anchor="middle" fill="#86efac" font-size="14" font-weight="600">Environment Config</text>
+  <text x="965" y="720" text-anchor="middle" fill="#9198a1" font-size="11">.env — JWT secret, admin creds, DB path</text>
+
+  <!-- ═══ Deploy ═══ -->
+  <rect x="30" y="770" width="1140" height="60" rx="12" fill="#1c2333" stroke="#7d8590" stroke-width="1.5"/>
+  <text x="600" y="808" text-anchor="middle" fill="#f0f6fc" font-size="15" font-weight="700">Single binary  ·  Systemd service  ·  /opt/ezweb  ·  Automated daily backups  ·  Health checks</text>
+
+  <text x="600" y="870" text-anchor="middle" fill="#7d8590" font-size="12">Go 1.24+  ·  Fiber v2  ·  Templ  ·  HTMX  ·  Alpine.js  ·  Tailwind CSS  ·  SQLite  ·  Docker  ·  Caddy</text>
+</svg>

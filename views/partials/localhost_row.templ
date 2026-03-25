@@ -1,0 +1,42 @@
+package partials
+
+import (
+	"ezweb/internal/docker"
+	"ezweb/views/components"
+	"fmt"
+)
+
+templ LocalhostRow(info docker.LocalServerInfo) {
+	<tr id="server-localhost" class="border-b border-gray-100 bg-indigo-50/30">
+		<td class="px-6 py-4">
+			<div class="flex items-center gap-2">
+				<span class="font-medium text-gray-900 text-sm">{ info.Hostname }</span>
+				<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200/60 uppercase tracking-wide">
+					EzWeb Host
+				</span>
+			</div>
+		</td>
+		<td class="px-6 py-4 text-sm text-gray-600 font-mono">127.0.0.1</td>
+		<td class="px-6 py-4 text-sm text-gray-600">-</td>
+		<td class="px-6 py-4 text-sm text-gray-600">-</td>
+		<td class="px-6 py-4">
+			@components.Badge(info.DockerStatus, localhostStatusColor(info.DockerStatus))
+		</td>
+		<td class="px-6 py-4">
+			<div class="flex items-center gap-3 text-xs text-gray-500">
+				<span title="Docker version">{ info.DockerVersion }</span>
+				<span class="text-gray-300">|</span>
+				<span title="Running / Total containers">
+					{ fmt.Sprintf("%d / %d containers", info.RunningCount, info.ContainerCount) }
+				</span>
+			</div>
+		</td>
+	</tr>
+}
+
+func localhostStatusColor(status string) string {
+	if status == "online" {
+		return "green"
+	}
+	return "red"
+}

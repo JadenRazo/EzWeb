@@ -1,0 +1,43 @@
+services:
+  wordpress:
+    image: wordpress:6.7-php8.3-apache
+    container_name: "{{.ContainerName}}"
+    restart: unless-stopped
+    ports:
+      - "{{.Port}}:80"
+    environment:
+      WORDPRESS_DB_HOST: "{{.ContainerName}}-db"
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: "{{.DBPassword}}"
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - "{{.ContainerName}}-data:/var/www/html"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/wp-login.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+  db:
+    image: mysql:8.4
+    container_name: "{{.ContainerName}}-db"
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: "{{.DBPassword}}"
+      MYSQL_ROOT_PASSWORD: "{{.DBRootPassword}}"
+    volumes:
+      - "{{.ContainerName}}-dbdata:/var/lib/mysql"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "wordpress", "--password={{.DBPassword}}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+volumes:
+  {{.ContainerName}}-data:
+  {{.ContainerName}}-dbdata:
