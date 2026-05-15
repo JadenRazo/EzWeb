@@ -10,12 +10,12 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/mark3labs/mcp-go v0.52.0
+	github.com/mark3labs/mcp-go v0.54.0
 	github.com/pkg/sftp v1.13.10
 	github.com/pquerna/otp v1.5.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/crypto v0.51.0
-	modernc.org/sqlite v1.50.0
+	modernc.org/sqlite v1.50.1
 )
 
 require (
@@ -67,7 +67,7 @@ require (
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
-	modernc.org/libc v1.72.0 // indirect
+	modernc.org/libc v1.72.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
