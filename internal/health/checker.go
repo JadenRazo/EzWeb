@@ -280,7 +280,7 @@ func localProbeURL(site models.Site) string {
 
 	// Fall back to the routing config. We prefer the catch-all rule (no
 	// PathPrefix), otherwise we use the last rule in the list. We only probe
-	// upstreams that are genuinely local — remote IPs (e.g. REDACTED-IP) are
+	// upstreams that are genuinely local — remote IPs (e.g. 203.0.113.10) are
 	// skipped because they are not reachable via the loopback interface.
 	if site.RoutingConfig != nil && len(site.RoutingConfig.Rules) > 0 {
 		rules := site.RoutingConfig.Rules

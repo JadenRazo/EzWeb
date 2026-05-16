@@ -11,7 +11,7 @@ type RoutingConfig struct {
 
 type RoutingRule struct {
 	PathPrefix  string            `json:"path_prefix,omitempty"`   // "/api/v1/urls/", empty for catch-all
-	Upstream    string            `json:"upstream"`                // "localhost:8090", "REDACTED-IP:20091"
+	Upstream    string            `json:"upstream"`                // "localhost:8090", "203.0.113.10:20091"
 	StripPrefix string            `json:"strip_prefix,omitempty"`  // prefix to strip, e.g. "/api/v1" turns /api/v1/urls/x into /urls/x
 	RewritePath string            `json:"rewrite_path,omitempty"`  // full rewrite, e.g. "/api/v1/devpanel/health"
 	WebSocket   bool              `json:"websocket,omitempty"`
