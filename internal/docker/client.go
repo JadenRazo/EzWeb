@@ -6,8 +6,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 )
 
 // NewLocalClient creates a Docker client connected to the local daemon,
@@ -18,7 +18,7 @@ func NewLocalClient() (*client.Client, error) {
 
 // PingLocal verifies the local Docker daemon is reachable.
 func PingLocal(ctx context.Context, cli *client.Client) error {
-	_, err := cli.Ping(ctx)
+	_, err := cli.Ping(ctx, client.PingOptions{})
 	return err
 }
 
@@ -55,7 +55,7 @@ func GetLocalServerInfo(ctx context.Context) LocalServerInfo {
 	}
 	defer cli.Close()
 
-	sv, err := cli.ServerVersion(ctx)
+	sv, err := cli.ServerVersion(ctx, client.ServerVersionOptions{})
 	if err != nil {
 		info.DockerStatus = "offline"
 		info.DockerVersion = "N/A"
@@ -65,11 +65,11 @@ func GetLocalServerInfo(ctx context.Context) LocalServerInfo {
 	info.DockerStatus = "online"
 	info.DockerVersion = fmt.Sprintf("Docker %s", sv.Version)
 
-	containers, err := cli.ContainerList(ctx, container.ListOptions{All: true})
+	containers, err := cli.ContainerList(ctx, client.ContainerListOptions{All: true})
 	if err == nil {
-		info.ContainerCount = len(containers)
-		for _, c := range containers {
-			if c.State == "running" {
+		info.ContainerCount = len(containers.Items)
+		for _, c := range containers.Items {
+			if c.State == container.StateRunning {
 				info.RunningCount++
 			}
 		}
