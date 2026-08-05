@@ -16,7 +16,7 @@ import (
 	"ezweb/internal/models"
 	sshutil "ezweb/internal/ssh"
 
-	dockertypes "github.com/docker/docker/api/types/container"
+	dockerclient "github.com/moby/moby/client"
 )
 
 const maxConcurrentChecks = 10
@@ -319,16 +319,16 @@ func (ch *Checker) checkLocalContainer(site models.Site, hc *models.HealthCheck)
 		containerName = strings.ReplaceAll(site.Domain, ".", "-")
 	}
 
-	inspect, err := cli.ContainerInspect(ctx, containerName)
+	inspect, err := cli.ContainerInspect(ctx, containerName, dockerclient.ContainerInspectOptions{})
 	if err != nil {
 		// Try listing containers by compose project label
 		if site.ComposePath != "" {
-			containers, listErr := cli.ContainerList(ctx, dockertypes.ListOptions{All: true})
+			containers, listErr := cli.ContainerList(ctx, dockerclient.ContainerListOptions{All: true})
 			if listErr == nil {
-				for _, c := range containers {
+				for _, c := range containers.Items {
 					for _, name := range c.Names {
 						if strings.Contains(name, containerName) {
-							hc.ContainerStatus = c.State
+							hc.ContainerStatus = string(c.State)
 							return
 						}
 					}
@@ -339,7 +339,7 @@ func (ch *Checker) checkLocalContainer(site models.Site, hc *models.HealthCheck)
 		return
 	}
 
-	hc.ContainerStatus = inspect.State.Status
+	hc.ContainerStatus = string(inspect.Container.State.Status)
 }
 
 func (ch *Checker) checkRemoteContainer(site models.Site, hc *models.HealthCheck) {
